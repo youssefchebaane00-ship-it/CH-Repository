@@ -1,5 +1,5 @@
 /* =========================================
-   Colors in one place — change these to restyle everything
+   Colors in one place: change these to restyle everything
    ========================================= */
 :root {
   --background: #f1f5f9;
@@ -7,7 +7,9 @@
   --text: #1e293b;
   --muted: #64748b;
   --accent: #4f46e5;
+  --accent-soft: #eef2ff;
   --border: #e2e8f0;
+  --danger: #dc2626;
 }
 
 /* Remove the browser's default spacing so we control it ourselves */
@@ -27,7 +29,7 @@ body {
 
 /* The dashboard is a grid: cards sit side by side, and wrap on small screens */
 .dashboard {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -47,7 +49,103 @@ body {
   margin-bottom: 16px;
 }
 
-/* ===== Greeting + Clock ===== */
+/* ===== Shared pieces used by several widgets ===== */
+
+input[type="text"],
+textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--text);
+  width: 100%;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* A text box and a button side by side */
+.row-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Lists of tasks and habits */
+.item-list {
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.item span {
+  flex: 1;
+  overflow-wrap: anywhere; /* long words wrap instead of overflowing */
+}
+
+/* A finished task gets crossed out and faded */
+.item.done span {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+/* The small grey ✕ button */
+.delete-button {
+  background: transparent;
+  color: var(--muted);
+  padding: 4px 8px;
+  font-size: 1.1rem;
+}
+
+.delete-button:hover {
+  color: var(--danger);
+}
+
+.empty-message {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.small-text {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 6px;
+  min-height: 1.2em;
+}
+
+/* ===== Greeting + Clock + Quote ===== */
 .greeting-card {
   grid-column: 1 / -1; /* stretch across the full width */
   text-align: center;
@@ -70,81 +168,98 @@ body {
   margin-top: 4px;
 }
 
-/* ===== To-do ===== */
-.todo-form {
+.quote {
+  margin: 20px auto 0;
+  max-width: 600px;
+  padding: 14px 20px;
+  background: var(--accent-soft);
+  border-radius: 12px;
+}
+
+.quote p {
+  font-style: italic;
+}
+
+.quote footer {
+  color: var(--muted);
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+
+/* ===== Weather ===== */
+.weather-main {
   display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.weather-icon {
+  font-size: 3rem;
+}
+
+.weather-temp {
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+
+.weather-details {
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* ===== Habits ===== */
+.streak {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ===== Notes ===== */
+.notes {
+  min-height: 180px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* ===== Links ===== */
+.link-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
   gap: 8px;
   margin-bottom: 16px;
 }
 
-.todo-form input {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 1rem;
+.link-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.todo-form input:focus {
-  outline: 2px solid var(--accent);
-  border-color: transparent;
-}
-
-button {
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.9;
-}
-
-.todo-list {
-  list-style: none;
-}
-
-.todo-item {
+.link-chip {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding-left: 14px;
 }
 
-.todo-item input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent);
-  cursor: pointer;
+.link-chip a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
 }
 
-.todo-item span {
-  flex: 1;
+.link-chip a:hover {
+  text-decoration: underline;
 }
 
-/* A finished task gets crossed out and faded */
-.todo-item.done span {
-  text-decoration: line-through;
-  color: var(--muted);
-}
-
-.delete-button {
-  background: transparent;
-  color: var(--muted);
-  padding: 4px 8px;
-  font-size: 1.1rem;
-}
-
-.delete-button:hover {
-  color: #dc2626;
-}
-
-.empty-message {
-  color: var(--muted);
-  font-style: italic;
+/* On narrow screens, stack the link form fields */
+@media (max-width: 500px) {
+  .link-form {
+    grid-template-columns: 1fr;
+  }
 }
