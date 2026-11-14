@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Basic page settings -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Dashboard</title>
+
+  <!-- Connect our stylesheet (the "paint and furniture") -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <main class="dashboard">
+
+    <!-- ===== Widget 1: Greeting + Clock ===== -->
+    <section class="card greeting-card">
+      <h1 id="greeting">Hello!</h1>
+      <p id="clock" class="clock">--:--:--</p>
+      <p id="date" class="date"></p>
+    </section>
+
+    <!-- ===== Widget 2: To-do list ===== -->
+    <section class="card">
+      <h2>✅ To-do</h2>
+
+      <!-- The form where you type a new task -->
+      <form id="todo-form" class="todo-form">
+        <input id="todo-input" type="text" placeholder="What do you need to do?" autocomplete="off">
+        <button type="submit">Add</button>
+      </form>
+
+      <!-- Tasks get added here by script.js -->
+      <ul id="todo-list" class="todo-list"></ul>
+
+      <p id="todo-empty" class="empty-message">No tasks yet. Add one above!</p>
+    </section>
+
+  </main>
+
+  <!-- Connect our JavaScript (the "electricity") — loaded last so the page exists first -->
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+/* =========================================
+   Colors in one place — change these to restyle everything
+   ========================================= */
+:root {
+  --background: #f1f5f9;
+  --card: #ffffff;
+  --text: #1e293b;
+  --muted: #64748b;
+  --accent: #4f46e5;
+  --border: #e2e8f0;
+}
+
+/* Remove the browser's default spacing so we control it ourselves */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: var(--background);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 40px 16px;
+}
+
+/* The dashboard is a grid: cards sit side by side, and wrap on small screens */
+.dashboard {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+/* A "card" is the white box every widget lives in */
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.card h2 {
+  font-size: 1.2rem;
+  margin-bottom: 16px;
+}
+
+/* ===== Greeting + Clock ===== */
+.greeting-card {
+  grid-column: 1 / -1; /* stretch across the full width */
+  text-align: center;
+}
+
+.greeting-card h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.clock {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums; /* stops digits from "jumping" as they change */
+}
+
+.date {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ===== To-do ===== */
+.todo-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.todo-form input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.todo-form input:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.todo-list {
+  list-style: none;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.todo-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.todo-item span {
+  flex: 1;
+}
+
+/* A finished task gets crossed out and faded */
+.todo-item.done span {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.delete-button {
+  background: transparent;
+  color: var(--muted);
+  padding: 4px 8px;
+  font-size: 1.1rem;
+}
+
+.delete-button:hover {
+  color: #dc2626;
+}
+
+.empty-message {
+  color: var(--muted);
+  font-style: italic;
+}
