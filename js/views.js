@@ -9,8 +9,7 @@ const NAV = [
   { id: "tasks", label: "Tasks", icon: "square-check-big" },
   { id: "calendar", label: "Calendar", icon: "calendar" },
   { id: "habits", label: "Habits", icon: "flame" },
-  { id: "study", label: "Study Tracker", icon: "graduation-cap", phase: 3,
-    plans: ["Subjects with colors and weekly goals", "Study sessions with start, pause and stop", "Pomodoro timer connected to your subjects"] },
+  { id: "study", label: "Study Tracker", icon: "graduation-cap" },
   { id: "notes", label: "Notes", icon: "notebook-pen" },
   { id: "goals", label: "Goals", icon: "target", phase: 4,
     plans: ["Daily, weekly, monthly and long-term goals", "Progress tracking and target dates", "Active and recently completed goals"] },
@@ -30,10 +29,11 @@ const Views = {
         <div class="widget-grid">
           <section class="card span-7" data-tasks></section>
           <section class="card span-5" data-habits></section>
+          <section class="card span-4" data-study></section>
           <section class="card span-4" data-upcoming></section>
           <section class="card span-4" data-weather></section>
-          <section class="card span-4" data-note></section>
-          <section class="card span-12" data-links></section>
+          <section class="card span-5" data-note></section>
+          <section class="card span-7" data-links></section>
         </div>
       </div>`;
 
@@ -41,6 +41,7 @@ const Views = {
     Stats.renderCards(container.querySelector("[data-stats]"));
     Tasks.renderWidget(container.querySelector("[data-tasks]"));
     Habits.renderWidget(container.querySelector("[data-habits]"));
+    Study.renderWidget(container.querySelector("[data-study]"));
     Calendar.renderWidget(container.querySelector("[data-upcoming]"));
     Weather.render(container.querySelector("[data-weather]"));
     QuickNote.render(container.querySelector("[data-note]"));
@@ -57,6 +58,10 @@ const Views = {
 
   habits(container) {
     Habits.renderPage(container);
+  },
+
+  study(container) {
+    Study.renderPage(container);
   },
 
   notes(container) {
@@ -105,6 +110,35 @@ const Views = {
         </section>
 
         <section class="card">
+          <div class="card-header"><h3 class="card-title"><span class="card-icon rose">${icon("timer")}</span>Pomodoro</h3></div>
+          <form data-pomo-form novalidate>
+            <div class="pomo-settings">
+              ${[["pomodoroFocus", "Focus (min)", 1, 120], ["pomodoroShort", "Short break (min)", 1, 60],
+                 ["pomodoroLong", "Long break (min)", 1, 90], ["pomodoroLongEvery", "Long break every … focus sessions", 2, 10]]
+                .map(([key, label, min, max]) => `
+                  <label class="field">
+                    <span>${label}</span>
+                    <input class="input" type="number" name="${key}" min="${min}" max="${max}" step="1" value="${settings[key]}" required>
+                  </label>`).join("")}
+            </div>
+            <div class="setting-row">
+              <div class="setting-text"><strong>Sound when a period ends</strong><span>A short chime made by your browser.</span></div>
+              <div class="setting-control">
+                <select class="input" name="pomodoroSound" aria-label="Sound">
+                  <option value="on"${settings.pomodoroSound ? " selected" : ""}>On</option>
+                  <option value="off"${settings.pomodoroSound ? "" : " selected"}>Off</option>
+                </select>
+                <button class="btn btn-secondary" type="button" data-test-sound>${icon("volume-2")}Test</button>
+              </div>
+            </div>
+            <div class="setting-row end">
+              <button class="btn btn-secondary" type="button" data-pomo-defaults>Reset to 25 / 5 / 15</button>
+              <button class="btn btn-primary" type="submit">Save Pomodoro settings</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
           <div class="card-header"><h3 class="card-title"><span class="card-icon emerald">${icon("download")}</span>Your data</h3></div>
           <div class="setting-row">
             <div class="setting-text">
@@ -146,6 +180,36 @@ const Views = {
       Store.setSetting("weatherCity", city);
       UI.toast(`Default city set to ${city}`);
     });
+
+    // Pomodoro settings
+    const pomoForm = container.querySelector("[data-pomo-form]");
+    pomoForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const numbers = ["pomodoroFocus", "pomodoroShort", "pomodoroLong", "pomodoroLongEvery"];
+      for (const key of numbers) {
+        const input = pomoForm.elements[key];
+        const value = Number(input.value);
+        const valid = Number.isInteger(value) && value >= Number(input.min) && value <= Number(input.max);
+        input.classList.toggle("invalid", !valid);
+        if (!valid) {
+          UI.toast(`Please enter a whole number from ${input.min} to ${input.max}.`, { type: "error" });
+          input.focus();
+          return;
+        }
+      }
+      const current = Store.get("settings");
+      const next = { ...current, pomodoroSound: pomoForm.elements.pomodoroSound.value === "on" };
+      numbers.forEach((key) => { next[key] = Number(pomoForm.elements[key].value); });
+      Store.set("settings", next);
+      // A timer that isn't running picks up the new length right away
+      if (Pomodoro.state().status === "idle") Pomodoro.reset();
+      UI.toast("Pomodoro settings saved");
+    });
+    container.querySelector("[data-pomo-defaults]").addEventListener("click", () => {
+      Object.entries({ pomodoroFocus: 25, pomodoroShort: 5, pomodoroLong: 15, pomodoroLongEvery: 4 })
+        .forEach(([key, value]) => { pomoForm.elements[key].value = value; });
+    });
+    container.querySelector("[data-test-sound]").addEventListener("click", () => Sound.chime());
 
     container.querySelector("[data-export]").addEventListener("click", () => {
       // Turn the data into a file and "click" a hidden download link

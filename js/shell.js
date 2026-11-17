@@ -177,6 +177,10 @@ const Shell = {
     if (events.length) groups.push({ label: "Events", items: events.map((e) => ({
       text: e.title, icon: Calendar.TYPES[e.type]?.icon || "calendar", page: "calendar", id: e.id, date: e.date, hint: UI.formatDay(e.date) })) });
 
+    const subjects = Study.subjects().filter((s) => has(s.name)).slice(0, 6);
+    if (subjects.length) groups.push({ label: "Subjects", items: subjects.map((s) => ({
+      text: s.name, icon: "graduation-cap", page: "study", id: s.id, hint: `This week: ${UI.formatDuration(Study.secondsBetween(...Study.periods().week, s.id))}` })) });
+
     const habits = Habits.all().filter((h) => has(h.name)).slice(0, 6);
     if (habits.length) groups.push({ label: "Habits", items: habits.map((h) => ({ text: h.name, icon: "flame", page: "habits", id: h.id })) });
 
@@ -236,6 +240,7 @@ const Shell = {
       { id: "task", label: "New task", icon: "square-check-big", key: "T" },
       { id: "event", label: "New event", icon: "calendar", key: "E" },
       { id: "note", label: "New note", icon: "file-text", key: "N" },
+      { id: "study", label: "Start study session", icon: "hourglass", key: "S" },
       { id: "habit", label: "New habit", icon: "flame", key: "H" },
       { id: "link", label: "New favorite link", icon: "link", key: "L" },
     ];
@@ -279,6 +284,30 @@ const Shell = {
       Notes.state.category = "all";
       Router.go("notes", note.id);
       setTimeout(() => document.querySelector('.note-editor [data-field="title"]')?.focus(), 50);
+      return;
+    }
+
+    if (type === "study") {
+      if (Study.activeSession()) {
+        UI.toast("A study session is already running.", { type: "info", actionLabel: "Open", onAction: () => Router.go("study") });
+        return;
+      }
+      if (!Study.subjects().length) {
+        UI.toast("First, add a subject (e.g. Mathematics).", { type: "info" });
+        if (!(await Study.openSubjectEditor())) return;
+      }
+      const values = await UI.form({
+        title: "Start a study session", submitLabel: "Start",
+        fields: [
+          { name: "subjectId", label: "Subject", type: "select", value: Study.draft.subjectId || Study.subjects()[0].id, options: Study.subjectOptions() },
+          { name: "description", label: "What are you studying? (optional)", placeholder: "e.g. Chapter 4 exercises" },
+        ],
+      });
+      if (values && Study.startTimer(values.subjectId, values.description)) {
+        Study.draft.subjectId = values.subjectId;
+        UI.toast(`Timer started for ${Study.subject(values.subjectId).name}`, { actionLabel: "Open", onAction: () => Router.go("study") });
+        if (["study", "dashboard"].includes(Router.currentId())) Router.refresh();
+      }
       return;
     }
 

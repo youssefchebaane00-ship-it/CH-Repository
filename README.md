@@ -16,6 +16,9 @@ Tip: bookmark it or set it as your browser's home page.
 - **Calendar:** month and week views, day agenda, events typed as Event, Deadline, Exam or Personal, with optional times. Tasks with due dates appear on their day. Double-click a day to add an event.
 - **Habits:** daily or weekly (“3× per week”) habits, current and longest streaks, completion rates, weekly and monthly check-in counts, 6-month heatmaps. History is never erased.
 - **Notes:** multiple notes with title, category, tags, pinning, search, timestamps and autosave. The dashboard quick note can be saved as a note.
+- **Study Tracker:** subjects with colors and weekly goals; a study stopwatch (start, pause, resume, stop & save, with the duration checked before saving); manual sessions; totals for today, this week, this month and per subject; a 7-day chart and session history
+- **Pomodoro:** 25/5/15 by default (changeable in Settings), start/pause/resume/reset/skip, long break after every 4 focus sessions, chime when a period ends, daily counter. Finished focus periods are logged to the chosen subject automatically.
+- Running timers keep going across pages, refreshes and closed tabs, and show in the top bar and the browser tab title
 - **Notifications** (bell): overdue tasks, tasks and events today, tomorrow's events, habits left today
 - **Weather:** current weather for any city (default: Tunis), via [Open-Meteo](https://open-meteo.com/) (free, no API key)
 - **Favorite links**
@@ -25,7 +28,7 @@ Tip: bookmark it or set it as your browser's home page.
 - **Settings:** theme, your name, default weather city, **backup export (JSON)**
 - Works on desktop, tablet and phone. Respects the system "reduce motion" setting.
 
-Study Tracker, Goals, Expenses and Analytics are marked **"Soon"** in the sidebar and come in later phases.
+Goals, Expenses and Analytics are marked **"Soon"** in the sidebar and come in later phases.
 
 ## Your data
 
@@ -41,6 +44,7 @@ css/
   components.css      cards, lists, badges, toasts, dialogs, menus
   widgets.css         styles for specific widgets and pages
   pages.css           tasks, calendar, habits, notes and notification styles
+  study.css           Study Tracker, Pomodoro and timer pill styles
   animations.css      all animations + reduced-motion support
 js/
   icons.js            Lucide icons (copied in, so they work offline)

@@ -17,6 +17,10 @@ const Store = {
     habits: [],       // { id, name, frequency: "daily"|"weekly", weeklyTarget, doneDays: ["2026-11-17", ...], createdAt }
     events: [],       // { id, title, description, date, startTime, endTime, type }
     notes: [],        // { id, title, content, category, tags, pinned, createdAt, updatedAt }
+    subjects: [],     // { id, name, color, weeklyGoalHours, createdAt }
+    studySessions: [],// { id, subjectId, description, date, startedAt, durationSec, source: "timer"|"pomodoro"|"manual" }
+    activeSession: null, // the running study stopwatch (see study.js)
+    pomodoro: null,      // the Pomodoro timer state (see pomodoro.js)
     links: [          // { id, name, url }
       { id: "default-google", name: "Google", url: "https://www.google.com" },
       { id: "default-youtube", name: "YouTube", url: "https://www.youtube.com" },
@@ -28,6 +32,11 @@ const Store = {
       weatherCity: "Tunis",
       profileName: "",
       sidebarCollapsed: false,
+      pomodoroFocus: 25,      // minutes
+      pomodoroShort: 5,
+      pomodoroLong: 15,
+      pomodoroLongEvery: 4,   // a long break after every 4 focus sessions
+      pomodoroSound: true,
     },
   },
 
@@ -52,6 +61,13 @@ const Store = {
       tags: Array.isArray(n.tags) ? n.tags : [],
     }),
     links: (l) => ({ ...l }),
+    subjects: (s) => ({ name: "Subject", color: "#22d3ee", weeklyGoalHours: 0, createdAt: null, ...s }),
+    studySessions: (s) => ({
+      subjectId: "", description: "", source: "manual", startedAt: null,
+      ...s,
+      durationSec: Math.max(0, Math.round(Number(s.durationSec) || 0)),
+      date: typeof s.date === "string" ? s.date : UI.dateKey(),
+    }),
   },
 
   cache: {},          // data already read, so we don't parse JSON every time
@@ -194,6 +210,8 @@ const Store = {
         habits: this.get("habits"),
         events: this.get("events"),
         notes: this.get("notes"),
+        subjects: this.get("subjects"),
+        studySessions: this.get("studySessions"),
         links: this.get("links"),
         quickNote: this.get("quickNote"),
         settings: this.get("settings"),

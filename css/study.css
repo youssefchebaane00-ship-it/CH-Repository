@@ -1,0 +1,530 @@
+/* =========================================================
+   STUDY TRACKER & POMODORO (Phase 3)
+   ========================================================= */
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+}
+
+.btn.full {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.setting-row.end {
+  justify-content: flex-end;
+}
+
+/* ===== Layout ===== */
+.study-timers,
+.study-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .study-timers,
+  .study-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ===== Stopwatch ===== */
+.stopwatch-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 8px;
+}
+
+.stopwatch-fields:has(> :only-child) {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 520px) {
+  .stopwatch-fields { grid-template-columns: 1fr; }
+}
+
+.stopwatch-clock {
+  margin: 26px 0 22px;
+  text-align: center;
+  font-size: 3.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.stopwatch-clock.paused {
+  color: var(--text-muted);
+}
+
+.widget-stopwatch .stopwatch-clock {
+  font-size: 2.1rem;
+  margin: 14px 0;
+}
+
+.timer-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* "Running" badge with a pulsing dot */
+.badge.live {
+  background: color-mix(in srgb, var(--emerald) 15%, transparent);
+  color: var(--emerald);
+}
+
+.badge.live .icon {
+  fill: currentColor;
+  width: 8px;
+  height: 8px;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ===== Pomodoro ===== */
+.pomo-modes {
+  display: flex;
+  width: 100%;
+}
+
+.pomo-modes button {
+  flex: 1;
+  justify-content: center;
+  padding: 7px 6px;
+}
+
+@media (max-width: 420px) {
+  .pomo-modes button .icon { display: none; }
+}
+
+.pomo-ring {
+  position: relative;
+  width: min(220px, 70vw);
+  aspect-ratio: 1;
+  margin: 20px auto;
+  --ring: var(--accent);
+}
+
+.pomo-ring[data-mode-color="short"],
+.pomo-ring[data-mode-color="long"] {
+  --ring: var(--emerald);
+}
+
+.pomo-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);   /* start the ring at 12 o'clock */
+}
+
+.pomo-track {
+  fill: none;
+  stroke: var(--surface-3);
+  stroke-width: 10;
+}
+
+.pomo-progress {
+  fill: none;
+  stroke: var(--ring);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke 0.3s;
+}
+
+.pomo-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pomo-time {
+  font-size: 2.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.pomo-label {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.pomo-subject {
+  margin-top: 18px;
+}
+
+.pomo-subject > span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.pomo-settings {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding-bottom: 6px;
+}
+
+.pomo-settings .field > span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-height: 2.4em;
+}
+
+@media (max-width: 700px) {
+  .pomo-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Pomodoro line inside the dashboard study widget */
+.pomo-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--rose) 12%, transparent);
+  color: var(--rose);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.pomo-mini strong {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Subjects ===== */
+.subject-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--subject, var(--accent));
+  margin-right: 8px;
+  vertical-align: 0;
+}
+
+.subject-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.subject-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 8px;
+  margin: 0 -8px;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s;
+}
+
+.subject-row + .subject-row {
+  border-top: 1px solid var(--border);
+}
+
+.subject-row:hover {
+  background: var(--surface-2);
+}
+
+.subject-row .subject-dot {
+  margin-top: 6px;
+}
+
+.subject-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subject-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.subject-top span {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.progress-track.thin {
+  height: 6px;
+}
+
+.progress-bar.subject-bar {
+  background: var(--subject);
+}
+
+/* ===== Bar chart (last 7 days) ===== */
+.bar-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  height: 220px;
+  align-items: end;
+}
+
+.bar-col {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bar-stack {
+  width: 100%;
+  max-width: 44px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: 6px 6px 3px 3px;
+  overflow: hidden;
+  transition: height 0.5s ease;
+}
+
+.bar-stack span {
+  display: block;
+  min-height: 2px;
+}
+
+.bar-value {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-height: 1em;
+}
+
+.bar-label {
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+.bar-col.today .bar-label {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ===== Horizontal bars (time per subject) ===== */
+.small-seg button {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+}
+
+.hbar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hbar-list.compact {
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.hbar-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+}
+
+.hbar-list.compact .hbar-top {
+  margin-bottom: 0;
+}
+
+/* Only the name on the left (">" = direct child), not the % inside the duration */
+.hbar-top > span {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.hbar-top strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ===== Session history ===== */
+.history-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-day {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.history-day:first-child {
+  padding-top: 0;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  margin: 0 -8px;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s;
+}
+
+.history-item:hover {
+  background: var(--surface-2);
+}
+
+.history-item .subject-dot {
+  margin-right: 0;
+}
+
+.history-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-text strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.history-text span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-source {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.history-source .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.history-duration {
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ===== Dashboard study widget ===== */
+.study-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.study-summary > div {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.study-summary strong {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-stopwatch {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* ===== Top bar timer pill ===== */
+.timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--emerald) 14%, transparent);
+  color: var(--emerald);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  max-width: 230px;
+}
+
+/* The text gets "…" when it's too long (ellipsis only works on the text itself) */
+.timer-pill [data-pill-text] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timer-pill.paused {
+  background: var(--surface-3);
+  color: var(--text-muted);
+}
+
+.pill-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.timer-pill.paused .pill-dot {
+  animation: none;
+}
+
+@media (max-width: 640px) {
+  .timer-pill {
+    max-width: 130px;
+    padding: 0 10px;
+  }
+}

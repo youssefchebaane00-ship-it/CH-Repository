@@ -42,7 +42,9 @@ const Stats = {
     const dailyDone = doneToday + habitsDone;
     const dailyPercent = dailyTotal ? Math.round((dailyDone / dailyTotal) * 100) : 0;
 
-    return { tasks, habits, doneToday, remaining, overdue, focusOpen, habitsDone, bestHabit, consistency, dailyTotal, dailyDone, dailyPercent };
+    const study = Study.totals();
+
+    return { tasks, habits, doneToday, remaining, overdue, focusOpen, habitsDone, bestHabit, consistency, dailyTotal, dailyDone, dailyPercent, study };
   },
 
   // The 4 summary cards on the dashboard
@@ -61,6 +63,7 @@ const Stats = {
       card("circle-check", "emerald", "Completed today", "doneToday", "doneTodaySub") +
       card("list-todo", "sky", "Remaining tasks", "remaining", "remainingSub") +
       card("flame", "amber", "Habits today", "habitsToday", "habitsSub") +
+      card("graduation-cap", "", "Study today", "studyToday", "studySub") +
       card("chart-column", "violet", "7-day consistency", "consistency", "consistencySub");
 
     this.refresh();
@@ -81,6 +84,10 @@ const Stats = {
       habitsSub: s.bestHabit.n ? `Best current streak: ${Habits.unit(s.bestHabit.habit, s.bestHabit.n)}` : "Tick a habit to start a streak",
       consistency: s.consistency === null ? "–" : `${s.consistency}%`,
       consistencySub: s.consistency === null ? "Add daily habits to measure this" : "Daily habit check-ins, last 7 days",
+      studyToday: UI.formatDuration(s.study.today),
+      studySub: s.study.weeklyGoalSec
+        ? `Week: ${UI.formatDuration(s.study.week)} of ${UI.formatDuration(s.study.weeklyGoalSec)}`
+        : `This week: ${UI.formatDuration(s.study.week)}`,
       dailyPercent: `${s.dailyPercent}%`,
       dailySub: s.dailyTotal ? `${s.dailyDone} of ${s.dailyTotal} done` : "add a task or habit",
     };

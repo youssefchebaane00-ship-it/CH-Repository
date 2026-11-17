@@ -9,16 +9,20 @@ Store.migrate();
 Shell.init();
 Notifications.init();
 
-// 3. Draw the page named in the address (Dashboard by default)
+// 3. A Pomodoro that ended while the app was closed is finished (and logged) now
+Pomodoro.tick();
+
+// 4. Draw the page named in the address (Dashboard by default)
 Router.start();
 
-// 4. Whenever any data is saved, recalculate statistics and reminders
+// 5. Whenever any data is saved, recalculate statistics and reminders
 Store.onChange(() => {
   Stats.refresh();
   Notifications.refresh();
 });
 
-// 5. One clock for the whole app: ticks every second.
+// 6. One clock for the whole app: ticks every second.
+//    It updates the clocks and timers, and finishes a Pomodoro when time is up.
 //    Every minute it refreshes the reminders (an event may have just ended).
 //    At midnight it redraws the page so "today" starts fresh
 //    (habit history is kept, only today's check-boxes reset).
@@ -26,6 +30,8 @@ let lastDay = UI.dateKey();
 let lastMinute = new Date().getMinutes();
 setInterval(() => {
   Welcome.tick();
+  Pomodoro.tick();
+  Study.tick();
   const now = new Date();
   if (now.getMinutes() !== lastMinute) {
     lastMinute = now.getMinutes();
@@ -39,3 +45,4 @@ setInterval(() => {
   }
 }, 1000);
 Welcome.tick();
+Study.tick();

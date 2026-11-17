@@ -79,6 +79,27 @@ const UI = {
     return this.formatDay(key);
   },
 
+  // 5400 seconds → "1h 30m"; 900 → "15m"; 40 → "40s"
+  formatDuration(seconds) {
+    const s = Math.max(0, Math.round(seconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    if (h) return `${h}h ${String(m).padStart(2, "0")}m`;
+    if (m) return `${m}m`;
+    return s ? `${s}s` : "0m";
+  },
+
+  // milliseconds → "1:05:09" or "25:00" (for running timers)
+  formatClock(ms, alwaysHours = false) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const mm = String(m).padStart(2, "0");
+    const ss = String(s).padStart(2, "0");
+    return h || alwaysHours ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  },
+
   // "a, b , c" → ["a", "b", "c"] (no duplicates, no empties)
   parseTags(text) {
     return [...new Set(String(text).split(",").map((t) => t.trim().toLowerCase()).filter(Boolean))].slice(0, 10);

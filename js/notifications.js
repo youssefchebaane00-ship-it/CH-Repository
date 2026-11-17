@@ -27,6 +27,18 @@ const Notifications = {
       tone: "sky", icon: Calendar.TYPES[e.type]?.icon || "calendar", text: e.title, sub: `Tomorrow · ${Calendar.timeLabel(e)}`, page: "calendar", id: e.id, date: e.date,
     }));
 
+    // Running timers (not urgent, just a reminder they're on)
+    const active = Study.activeSession();
+    if (active) items.push({
+      tone: "accent", icon: "hourglass", text: `Study session ${active.runningSince ? "running" : "paused"}`,
+      sub: `${Study.subject(active.subjectId)?.name || "Study"} · ${UI.formatDuration(Study.activeElapsedMs() / 1000)} so far`, page: "study",
+    });
+    const pomo = Pomodoro.state();
+    if (pomo.status !== "idle") items.push({
+      tone: "rose", icon: "timer", text: `Pomodoro ${pomo.status === "paused" ? "paused" : "running"}`,
+      sub: `${Pomodoro.MODES[pomo.mode].label} · ${UI.formatClock(Pomodoro.remainingMs(pomo))} left`, page: "study",
+    });
+
     const habitsLeft = Habits.all().filter((h) => !Habits.doneForToday(h));
     if (habitsLeft.length) items.push({
       tone: "amber", icon: "flame", text: `${habitsLeft.length} habit${habitsLeft.length === 1 ? "" : "s"} left today`,

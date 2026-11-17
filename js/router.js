@@ -7,6 +7,7 @@
 
 const Router = {
   highlightId: null, // an item to highlight after the page is drawn (from search)
+  pageTitle: "PersonalDashboard",
 
   start() {
     window.addEventListener("hashchange", () => this.render());
@@ -44,7 +45,8 @@ const Router = {
 
     if (animate) UI.replayAnimation(view, "view-enter");
     document.getElementById("page-title").textContent = item.label;
-    document.title = `${item.label} · PersonalDashboard`;
+    this.pageTitle = `${item.label} · PersonalDashboard`; // study.js adds a running timer in front
+    document.title = this.pageTitle;
     Shell.setActive(id);
     Shell.closeMobileNav();
     Stats.refresh();
