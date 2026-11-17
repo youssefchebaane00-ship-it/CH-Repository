@@ -40,6 +40,50 @@ function makeDeleteButton(label, onClick) {
   return button;
 }
 
+// Build the text part of a task/habit: <span class="item-text"><span class="item-label">…</span></span>
+// (Two layers: the outer one fills the row, the inner one hugs the words so the
+//  "crossed out" line is exactly as long as the text.)
+function makeItemText(words) {
+  const outer = document.createElement("span");
+  outer.className = "item-text";
+  const label = document.createElement("span");
+  label.className = "item-label";
+  label.textContent = words;
+  outer.appendChild(label);
+  return outer;
+}
+
+// Show the "nothing here yet" message only when a list is empty
+function updateEmptyMessage(list, message) {
+  message.style.display = list.children.length === 0 ? "block" : "none";
+}
+
+// =========================================
+// ANIMATION HELPERS
+// =========================================
+
+// Is "Animation effects" switched off in Windows? Then we skip the movement.
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+// Play a CSS animation class on an element, even if it played before.
+// (Removing and re-adding a class doesn't restart an animation on its own;
+//  reading offsetWidth in between forces the browser to notice the change.)
+function replayAnimation(element, className) {
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+
+// Play the "leaving" animation, THEN run `whenDone` (which removes the item)
+function removeWithAnimation(element, whenDone) {
+  if (reduceMotion.matches) {
+    whenDone();
+    return;
+  }
+  element.classList.add("leaving");
+  setTimeout(whenDone, 250); // 250 ms = the length of the animation in style.css
+}
+
 
 // =========================================
 // THEME BUTTON: switch between light and dark
@@ -69,9 +113,21 @@ function updateThemeButton() {
 
 themeButton.addEventListener("click", () => {
   const newTheme = currentTheme() === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = newTheme;
-  save("theme", newTheme); // remember it for next time
-  updateThemeButton();
+
+  function applyTheme() {
+    document.documentElement.dataset.theme = newTheme;
+    save("theme", newTheme); // remember it for next time
+    updateThemeButton();
+  }
+
+  // startViewTransition takes a "photo" of the page, applies the change,
+  // then cross-fades from the photo to the new look. Older browsers don't
+  // have it, so there we just switch instantly.
+  if (document.startViewTransition && !reduceMotion.matches) {
+    document.startViewTransition(applyTheme);
+  } else {
+    applyTheme();
+  }
 });
 
 // If Windows changes mode while the page is open, keep the icon correct
@@ -226,6 +282,7 @@ async function loadWeather(city) {
     weatherResult.querySelector(".weather-details").textContent =
       `Feels like ${Math.round(now.apparent_temperature)}°C · ` +
       `Humidity ${now.relative_humidity_2m}% · Wind ${Math.round(now.wind_speed_10m)} km/h`;
+    replayAnimation(weatherResult, "fade-in"); // fade the new weather in
 
     save("weatherCity", city); // remember the city for next time
   } catch {
@@ -259,39 +316,35 @@ const todoEmpty = document.getElementById("todo-empty");
 // Each task looks like: { text: "Buy milk", done: false }
 let todos = load("todos", []);
 
-// Redraw the whole list from the `todos` array
-function renderTodos() {
-  todoList.innerHTML = ""; // clear the old list
+// Build ONE task row. We only touch the row that changes (instead of
+// redrawing the whole list), so animations play only where they should.
+function createTodoItem(todo) {
+  const li = document.createElement("li");
+  li.className = "item" + (todo.done ? " done" : "");
 
-  todos.forEach((todo, index) => {
-    const li = document.createElement("li");
-    li.className = "item" + (todo.done ? " done" : "");
-
-    // Checkbox to mark the task done / not done
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = todo.done;
-    checkbox.addEventListener("change", () => {
-      todos[index].done = checkbox.checked;
-      save("todos", todos);
-      renderTodos();
-    });
-
-    const text = document.createElement("span");
-    text.textContent = todo.text;
-
-    const deleteButton = makeDeleteButton("Delete task", () => {
-      todos.splice(index, 1); // remove 1 item at this position
-      save("todos", todos);
-      renderTodos();
-    });
-
-    li.append(checkbox, text, deleteButton);
-    todoList.appendChild(li);
+  // Checkbox to mark the task done / not done
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = todo.done;
+  checkbox.addEventListener("change", () => {
+    todo.done = checkbox.checked;
+    save("todos", todos);
+    li.classList.toggle("done", todo.done); // CSS draws (or erases) the line smoothly
+    if (todo.done) replayAnimation(checkbox, "pop");
   });
 
-  // Show the "No tasks yet" message only when the list is empty
-  todoEmpty.style.display = todos.length === 0 ? "block" : "none";
+  const deleteButton = makeDeleteButton("Delete task", () => {
+    deleteButton.disabled = true; // ignore double-clicks while it animates away
+    removeWithAnimation(li, () => {
+      li.remove();
+      todos = todos.filter((t) => t !== todo); // keep every task except this one
+      save("todos", todos);
+      updateEmptyMessage(todoList, todoEmpty);
+    });
+  });
+
+  li.append(checkbox, makeItemText(todo.text), deleteButton);
+  return li;
 }
 
 todoForm.addEventListener("submit", (event) => {
@@ -299,13 +352,20 @@ todoForm.addEventListener("submit", (event) => {
   const text = todoInput.value.trim(); // trim() removes extra spaces
   if (text === "") return;             // ignore empty tasks
 
-  todos.push({ text: text, done: false });
+  const todo = { text: text, done: false };
+  todos.push(todo);
   save("todos", todos);
-  renderTodos();
+
+  const li = createTodoItem(todo);
+  li.classList.add("entering"); // slide in
+  todoList.appendChild(li);
+  updateEmptyMessage(todoList, todoEmpty);
   todoInput.value = ""; // clear the box for the next task
 });
 
-renderTodos();
+// Draw the saved tasks when the page first loads
+todos.forEach((todo) => todoList.appendChild(createTodoItem(todo)));
+updateEmptyMessage(todoList, todoEmpty);
 
 
 // =========================================
@@ -339,50 +399,51 @@ function countStreak(doneDays) {
   return streak;
 }
 
-function renderHabits() {
-  habitList.innerHTML = "";
-  const today = dateKey(new Date());
+function streakText(habit) {
+  const days = countStreak(habit.doneDays);
+  return `🔥 ${days} day${days === 1 ? "" : "s"}`;
+}
 
-  habits.forEach((habit, index) => {
-    const doneToday = habit.doneDays.includes(today);
+// Build ONE habit row (same idea as the to-do list)
+function createHabitItem(habit) {
+  const doneToday = habit.doneDays.includes(dateKey(new Date()));
 
-    const li = document.createElement("li");
-    li.className = "item" + (doneToday ? " done" : "");
+  const li = document.createElement("li");
+  li.className = "item" + (doneToday ? " done" : "");
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = doneToday;
-    checkbox.title = "Done today?";
-    checkbox.addEventListener("change", () => {
-      if (checkbox.checked) {
-        habit.doneDays.push(today);
-      } else {
-        habit.doneDays = habit.doneDays.filter((d) => d !== today);
-      }
-      save("habits", habits);
-      renderHabits();
-    });
+  const streak = document.createElement("span");
+  streak.className = "streak";
+  streak.textContent = streakText(habit);
 
-    const name = document.createElement("span");
-    name.textContent = habit.name;
-
-    const streak = document.createElement("span");
-    streak.className = "streak";
-    const days = countStreak(habit.doneDays);
-    streak.textContent = `🔥 ${days} day${days === 1 ? "" : "s"}`;
-    streak.style.flex = "0"; // don't stretch like the name does
-
-    const deleteButton = makeDeleteButton("Delete habit", () => {
-      habits.splice(index, 1);
-      save("habits", habits);
-      renderHabits();
-    });
-
-    li.append(checkbox, name, streak, deleteButton);
-    habitList.appendChild(li);
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = doneToday;
+  checkbox.title = "Done today?";
+  checkbox.addEventListener("change", () => {
+    const today = dateKey(new Date());
+    if (checkbox.checked) {
+      habit.doneDays.push(today);
+      replayAnimation(checkbox, "pop");
+    } else {
+      habit.doneDays = habit.doneDays.filter((d) => d !== today);
+    }
+    save("habits", habits);
+    li.classList.toggle("done", checkbox.checked);
+    streak.textContent = streakText(habit); // update just the badge
   });
 
-  habitEmpty.style.display = habits.length === 0 ? "block" : "none";
+  const deleteButton = makeDeleteButton("Delete habit", () => {
+    deleteButton.disabled = true;
+    removeWithAnimation(li, () => {
+      li.remove();
+      habits = habits.filter((h) => h !== habit);
+      save("habits", habits);
+      updateEmptyMessage(habitList, habitEmpty);
+    });
+  });
+
+  li.append(checkbox, makeItemText(habit.name), streak, deleteButton);
+  return li;
 }
 
 habitForm.addEventListener("submit", (event) => {
@@ -390,13 +451,19 @@ habitForm.addEventListener("submit", (event) => {
   const name = habitInput.value.trim();
   if (name === "") return;
 
-  habits.push({ name: name, doneDays: [] });
+  const habit = { name: name, doneDays: [] };
+  habits.push(habit);
   save("habits", habits);
-  renderHabits();
+
+  const li = createHabitItem(habit);
+  li.classList.add("entering");
+  habitList.appendChild(li);
+  updateEmptyMessage(habitList, habitEmpty);
   habitInput.value = "";
 });
 
-renderHabits();
+habits.forEach((habit) => habitList.appendChild(createHabitItem(habit)));
+updateEmptyMessage(habitList, habitEmpty);
 
 
 // =========================================
@@ -440,30 +507,29 @@ let links = load("links", [
   { name: "Gmail", url: "https://mail.google.com" },
 ]);
 
-function renderLinks() {
-  linkList.innerHTML = "";
+// Build ONE link chip
+function createLinkChip(link) {
+  const chip = document.createElement("div");
+  chip.className = "link-chip";
 
-  links.forEach((link, index) => {
-    const chip = document.createElement("div");
-    chip.className = "link-chip";
+  const a = document.createElement("a");
+  a.href = link.url;
+  a.textContent = link.name;
+  a.target = "_blank";   // open in a new tab
+  a.rel = "noopener";    // safety habit for links that open new tabs
 
-    const a = document.createElement("a");
-    a.href = link.url;
-    a.textContent = link.name;
-    a.target = "_blank";   // open in a new tab
-    a.rel = "noopener";    // safety habit for links that open new tabs
-
-    const deleteButton = makeDeleteButton(`Remove ${link.name}`, () => {
-      links.splice(index, 1);
+  const deleteButton = makeDeleteButton(`Remove ${link.name}`, () => {
+    deleteButton.disabled = true;
+    removeWithAnimation(chip, () => {
+      chip.remove();
+      links = links.filter((l) => l !== link);
       save("links", links);
-      renderLinks();
+      updateEmptyMessage(linkList, linkEmpty);
     });
-
-    chip.append(a, deleteButton);
-    linkList.appendChild(chip);
   });
 
-  linkEmpty.style.display = links.length === 0 ? "block" : "none";
+  chip.append(a, deleteButton);
+  return chip;
 }
 
 linkForm.addEventListener("submit", (event) => {
@@ -477,11 +543,17 @@ linkForm.addEventListener("submit", (event) => {
     url = "https://" + url;
   }
 
-  links.push({ name: name, url: url });
+  const link = { name: name, url: url };
+  links.push(link);
   save("links", links);
-  renderLinks();
+
+  const chip = createLinkChip(link);
+  chip.classList.add("entering");
+  linkList.appendChild(chip);
+  updateEmptyMessage(linkList, linkEmpty);
   linkNameInput.value = "";
   linkUrlInput.value = "";
 });
 
-renderLinks();
+links.forEach((link) => linkList.appendChild(createLinkChip(link)));
+updateEmptyMessage(linkList, linkEmpty);

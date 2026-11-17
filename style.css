@@ -16,6 +16,7 @@
   --border: #e2e8f0;
   --danger: #dc2626;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --glow: 0 12px 28px rgba(13, 148, 136, 0.18);   /* teal glow when hovering a card */
 }
 
 /* Dark mode colors. They're used in two situations:
@@ -35,6 +36,7 @@
   --border: #263640;
   --danger: #f87171;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --glow: 0 12px 28px rgba(45, 212, 191, 0.15);
 }
 
 /* Same colors again, used automatically when Windows is dark,
@@ -53,6 +55,7 @@
     --border: #263640;
     --danger: #f87171;
     --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --glow: 0 12px 28px rgba(45, 212, 191, 0.15);
   }
 }
 
@@ -86,6 +89,30 @@ body {
   border-radius: 16px;
   padding: 24px;
   box-shadow: var(--shadow);
+
+  /* "transition" = when these properties change, change them smoothly over time */
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+
+  /* Entrance: each card fades and slides up when the page opens.
+     "backwards" applies the start position during the delay, then lets go,
+     so the hover effect below still works afterwards. */
+  animation: card-in 0.5s ease backwards;
+  animation-delay: calc(var(--order, 0) * 90ms);
+}
+
+/* Give each card a number so they appear one after another (staggered) */
+.card:nth-child(1) { --order: 0; }
+.card:nth-child(2) { --order: 1; }
+.card:nth-child(3) { --order: 2; }
+.card:nth-child(4) { --order: 3; }
+.card:nth-child(5) { --order: 4; }
+.card:nth-child(6) { --order: 5; }
+
+/* Hover: lift the card a little and add a soft teal glow.
+   The big greeting card stays still so the page doesn't feel jumpy. */
+.card:not(.greeting-card):hover {
+  transform: translateY(-4px);
+  box-shadow: var(--glow);
 }
 
 .card h2 {
@@ -121,10 +148,16 @@ button {
   padding: 10px 16px;
   font-size: 1rem;
   cursor: pointer;
+  transition: transform 0.1s ease, opacity 0.2s ease;
 }
 
 button:hover {
   opacity: 0.9;
+}
+
+/* "Squish" while the button is being pressed */
+button:active {
+  transform: scale(0.94);
 }
 
 /* A text box and a button side by side */
@@ -155,21 +188,23 @@ button:hover {
   flex-shrink: 0;
 }
 
-.item span {
+/* The text part of a task or habit takes up all the free space */
+.item-text {
   flex: 1;
   overflow-wrap: anywhere; /* long words wrap instead of overflowing */
 }
 
-/* A finished task gets crossed out and faded */
-.item.done span {
-  text-decoration: line-through;
-  color: var(--muted);
+/* The words themselves. The "crossed out" line is drawn as a thin background
+   stripe that starts 0% wide. When the item is done it grows to 100%, so the
+   line draws itself from left to right. */
+.item-label {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 55% / 0% 2px;
+  transition: background-size 0.35s ease, color 0.35s ease;
 }
 
-/* ...but never cross out the streak badge: it's good news, not a finished task! */
-.item.done .streak {
-  text-decoration: none;
-  color: var(--accent);
+.item.done .item-label {
+  background-size: 100% 2px;
+  color: var(--muted);
 }
 
 /* The small grey ✕ button */
@@ -215,6 +250,11 @@ button:hover {
   background: var(--accent-soft);
   font-size: 1.3rem;
   line-height: 1;
+  transition: transform 0.3s ease;
+}
+
+.theme-toggle:hover {
+  transform: rotate(20deg) scale(1.08);
 }
 
 .greeting-card h1 {
@@ -327,5 +367,74 @@ button:hover {
 @media (max-width: 500px) {
   .link-form {
     grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================
+   ANIMATIONS
+   "@keyframes" describes a movement step by step: where it starts (from)
+   and where it ends (to). Elements then use it with "animation: name".
+   ========================================= */
+
+/* Cards: fade in while sliding up */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* New task / habit / link: slide in from above */
+@keyframes item-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Deleted item: fade, shrink and slide away */
+@keyframes item-out {
+  to { opacity: 0; transform: translateX(24px) scale(0.92); }
+}
+
+/* Checkbox: quick "pop" when ticked */
+@keyframes pop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+/* Gentle fade, used when the weather appears */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* script.js adds these classes at the right moment */
+.entering { animation: item-in 0.3s ease; }
+.leaving  { animation: item-out 0.25s ease forwards; pointer-events: none; }
+.pop      { animation: pop 0.3s ease; }
+.fade-in  { animation: fade-in 0.4s ease; }
+
+/* Light/dark switch: the browser cross-fades the old and new colors */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.4s;
+}
+
+/* =========================================
+   REDUCED MOTION (accessibility)
+   If someone turned off "Animation effects" in Windows (or the same
+   setting on their phone), switch off movement and keep the page still.
+   ========================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .card:not(.greeting-card):hover,
+  .theme-toggle:hover,
+  button:active {
+    transform: none;
   }
 }
