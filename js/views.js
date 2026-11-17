@@ -7,8 +7,7 @@
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: "layout-dashboard" },
   { id: "tasks", label: "Tasks", icon: "square-check-big" },
-  { id: "calendar", label: "Calendar", icon: "calendar", phase: 2,
-    plans: ["Month, week and day views", "Events, deadlines and exams", "Task due dates shown in the calendar"] },
+  { id: "calendar", label: "Calendar", icon: "calendar" },
   { id: "habits", label: "Habits", icon: "flame" },
   { id: "study", label: "Study Tracker", icon: "graduation-cap", phase: 3,
     plans: ["Subjects with colors and weekly goals", "Study sessions with start, pause and stop", "Pomodoro timer connected to your subjects"] },
@@ -31,40 +30,37 @@ const Views = {
         <div class="widget-grid">
           <section class="card span-7" data-tasks></section>
           <section class="card span-5" data-habits></section>
+          <section class="card span-4" data-upcoming></section>
           <section class="card span-4" data-weather></section>
           <section class="card span-4" data-note></section>
-          <section class="card span-4" data-links></section>
+          <section class="card span-12" data-links></section>
         </div>
       </div>`;
 
     Welcome.render(container.querySelector("[data-welcome]"));
     Stats.renderCards(container.querySelector("[data-stats]"));
-    Tasks.render(container.querySelector("[data-tasks]"), { mode: "today" });
-    Habits.render(container.querySelector("[data-habits]"));
+    Tasks.renderWidget(container.querySelector("[data-tasks]"));
+    Habits.renderWidget(container.querySelector("[data-habits]"));
+    Calendar.renderWidget(container.querySelector("[data-upcoming]"));
     Weather.render(container.querySelector("[data-weather]"));
     QuickNote.render(container.querySelector("[data-note]"));
     Links.render(container.querySelector("[data-links]"));
   },
 
   tasks(container) {
-    container.innerHTML = `
-      ${this.pageHeader("Tasks", "Everything you need to do, in one list.")}
-      <section class="card" data-tasks></section>`;
-    Tasks.render(container.querySelector("[data-tasks]"), { mode: "all" });
+    Tasks.renderPage(container);
+  },
+
+  calendar(container) {
+    Calendar.renderPage(container);
   },
 
   habits(container) {
-    container.innerHTML = `
-      ${this.pageHeader("Habits", "Tick each habit once a day to build your streaks. The squares show the last 7 days.")}
-      <section class="card" data-habits></section>`;
-    Habits.render(container.querySelector("[data-habits]"), { page: true });
+    Habits.renderPage(container);
   },
 
   notes(container) {
-    container.innerHTML = `
-      ${this.pageHeader("Notes", "Your quick note, with more room to write.")}
-      <section class="card page-note" data-note></section>`;
-    QuickNote.render(container.querySelector("[data-note]"), { page: true });
+    Notes.renderPage(container);
   },
 
   settings(container) {

@@ -33,6 +33,57 @@ const UI = {
     return this.dateKey(date);
   },
 
+  // ----- More date tools. All work with "YYYY-MM-DD" keys in local time. -----
+
+  // "2026-11-17" → a Date at midnight local time
+  parseKey(key) {
+    const [y, m, d] = key.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  },
+
+  isDateKey(value) {
+    return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(this.parseKey(value));
+  },
+
+  addDays(key, days) {
+    const date = this.parseKey(key);
+    date.setDate(date.getDate() + days);
+    return this.dateKey(date);
+  },
+
+  // Whole days from key a to key b (b - a). Uses UTC so daylight saving can't shift it.
+  diffDays(a, b) {
+    const [ay, am, ad] = a.split("-").map(Number);
+    const [by, bm, bd] = b.split("-").map(Number);
+    return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
+  },
+
+  // Monday of the week containing `key` (weeks start on Monday)
+  startOfWeek(key) {
+    const day = this.parseKey(key).getDay();   // 0 = Sunday … 6 = Saturday
+    return this.addDays(key, day === 0 ? -6 : 1 - day);
+  },
+
+  formatDay(key, options = { weekday: "short", day: "numeric", month: "short" }) {
+    return this.parseKey(key).toLocaleDateString(undefined, options);
+  },
+
+  // "Today", "Tomorrow", "In 3 days", "2 days ago"…
+  relativeDay(key) {
+    const diff = this.diffDays(this.dateKey(), key);
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Tomorrow";
+    if (diff === -1) return "Yesterday";
+    if (diff > 1 && diff < 7) return `In ${diff} days`;
+    if (diff < -1 && diff > -7) return `${-diff} days ago`;
+    return this.formatDay(key);
+  },
+
+  // "a, b , c" → ["a", "b", "c"] (no duplicates, no empties)
+  parseTags(text) {
+    return [...new Set(String(text).split(",").map((t) => t.trim().toLowerCase()).filter(Boolean))].slice(0, 10);
+  },
+
   // Turn an HTML string into a real element
   html(markup) {
     const template = document.createElement("template");
@@ -131,23 +182,42 @@ const UI = {
     });
   },
 
-  // A small form in a dialog. Resolves to { fieldName: value } or null if cancelled.
-  // fields: [{ name, label, placeholder, value, required, validate(value) → error text or "" }]
-  form({ title, submitLabel = "Save", fields }) {
+  // A form in a dialog. Resolves to { fieldName: value }, or null if cancelled,
+  // or "delete" if the optional Delete button was clicked (edit dialogs).
+  // fields: [{ name, label, type, options, placeholder, value, required, half,
+  //            validate(value) → error text or "" }]
+  // type: "text" (default) | "textarea" | "select" | "date" | "time" | "number"
+  form({ title, submitLabel = "Save", fields, deleteLabel = null }) {
     return new Promise((resolve) => {
-      const fieldsHtml = fields.map((f) => `
-        <div class="field">
-          <label for="modal-${f.name}">${this.escape(f.label)}</label>
-          <input class="input" id="modal-${f.name}" name="${f.name}" type="text" autocomplete="off"
-                 placeholder="${this.escape(f.placeholder || "")}" value="${this.escape(f.value || "")}">
-          <span class="field-error" data-error-for="${f.name}"></span>
-        </div>`).join("");
+      const fieldHtml = (f) => {
+        const id = `modal-${f.name}`;
+        const value = f.value === undefined || f.value === null ? "" : String(f.value);
+        const common = `class="input" id="${id}" name="${f.name}"`;
+        let control;
+        if (f.type === "textarea") {
+          control = `<textarea ${common} rows="${f.rows || 3}" placeholder="${this.escape(f.placeholder || "")}">${this.escape(value)}</textarea>`;
+        } else if (f.type === "select") {
+          control = `<select ${common}>${f.options.map((o) =>
+            `<option value="${this.escape(o.value)}"${o.value === value ? " selected" : ""}>${this.escape(o.label)}</option>`).join("")}</select>`;
+        } else {
+          const extra = f.type === "number" ? ` min="${f.min ?? ""}" max="${f.max ?? ""}" step="1"` : "";
+          control = `<input ${common} type="${f.type || "text"}" autocomplete="off"${extra}
+                       placeholder="${this.escape(f.placeholder || "")}" value="${this.escape(value)}">`;
+        }
+        return `
+          <div class="field${f.half ? " half" : ""}">
+            <label for="${id}">${this.escape(f.label)}</label>
+            ${control}
+            <span class="field-error" data-error-for="${f.name}"></span>
+          </div>`;
+      };
 
       this.openModal(`
         <form novalidate>
           <h2>${this.escape(title)}</h2>
-          <div class="modal-fields">${fieldsHtml}</div>
+          <div class="modal-fields">${fields.map(fieldHtml).join("")}</div>
           <div class="modal-actions">
+            ${deleteLabel ? `<button class="btn btn-secondary danger-text" type="button" data-delete>${icon("trash-2")}${this.escape(deleteLabel)}</button>` : ""}
             <button class="btn btn-secondary" type="button" data-cancel>Cancel</button>
             <button class="btn btn-primary" type="submit">${this.escape(submitLabel)}</button>
           </div>
@@ -155,6 +225,7 @@ const UI = {
         (modal, close) => {
           const form = modal.querySelector("form");
           const finish = (values) => { close(); resolve(values); };
+          if (deleteLabel) modal.querySelector("[data-delete]").addEventListener("click", () => finish("delete"));
 
           form.addEventListener("submit", (event) => {
             event.preventDefault();
@@ -163,7 +234,7 @@ const UI = {
 
             for (const f of fields) {
               const input = form.elements[f.name];
-              const value = input.value.trim();
+              const value = f.type === "textarea" ? input.value.replace(/\s+$/, "") : input.value.trim();
               let error = "";
               if (f.required && value === "") error = `${f.label} is required.`;
               else if (f.validate) error = f.validate(value) || "";

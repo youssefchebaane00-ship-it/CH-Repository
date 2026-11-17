@@ -20,6 +20,7 @@ const Shell = {
     document.addEventListener("click", (event) => {
       if (!event.target.closest(".search")) this.closeSearch();
       if (!event.target.closest(".quick-add")) this.closeQuickAdd();
+      if (!event.target.closest(".notifications")) Notifications.close();
     });
   },
 
@@ -150,8 +151,12 @@ const Shell = {
       this.closeSearch();
       input.value = "";
       input.blur();
-      if (item.dataset.url) window.open(item.dataset.url, "_blank", "noopener");
-      else Router.go(item.dataset.page, item.dataset.id || null);
+      if (item.dataset.url) return window.open(item.dataset.url, "_blank", "noopener");
+      // Make sure the item will be visible on its page
+      if (item.dataset.page === "tasks") { Tasks.state.filter = "all"; Tasks.state.category = "all"; }
+      if (item.dataset.page === "notes") { Notes.state.query = ""; Notes.state.category = "all"; }
+      if (item.dataset.date) { Calendar.state.selected = item.dataset.date; Calendar.state.cursor = item.dataset.date; }
+      Router.go(item.dataset.page, item.dataset.id || null);
     });
   },
 
@@ -162,18 +167,28 @@ const Shell = {
     const has = (text) => String(text).toLowerCase().includes(q);
     const groups = [];
 
-    const tasks = Store.get("tasks").filter((t) => has(t.title)).slice(0, 6);
-    if (tasks.length) groups.push({ label: "Tasks", items: tasks.map((t) => ({ text: t.title, icon: t.done ? "circle-check" : "square-check-big", page: "tasks", id: t.id, hint: t.done ? "Done" : "" })) });
+    const tasks = Tasks.all().filter((t) => has(t.title) || has(t.description) || t.tags.some(has)).slice(0, 6);
+    if (tasks.length) groups.push({ label: "Tasks", items: tasks.map((t) => ({
+      text: t.title, icon: t.done ? "circle-check" : "square-check-big", page: "tasks", id: t.id,
+      hint: t.done ? "Done" : t.dueDate ? UI.relativeDay(t.dueDate) : "" })) });
 
-    const habits = Store.get("habits").filter((h) => has(h.name)).slice(0, 6);
+    const events = Calendar.all().filter((e) => has(e.title) || has(e.description))
+      .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+    if (events.length) groups.push({ label: "Events", items: events.map((e) => ({
+      text: e.title, icon: Calendar.TYPES[e.type]?.icon || "calendar", page: "calendar", id: e.id, date: e.date, hint: UI.formatDay(e.date) })) });
+
+    const habits = Habits.all().filter((h) => has(h.name)).slice(0, 6);
     if (habits.length) groups.push({ label: "Habits", items: habits.map((h) => ({ text: h.name, icon: "flame", page: "habits", id: h.id })) });
 
-    const note = Store.get("quickNote");
-    const at = note.toLowerCase().indexOf(q);
+    const notes = Notes.sorted(Notes.all().filter((n) => Notes.matches(n, q))).slice(0, 6);
+    const noteItems = notes.map((n) => ({ text: Notes.titleOf(n), icon: n.pinned ? "pin" : "file-text", page: "notes", id: n.id, hint: Notes.CATEGORIES[n.category] }));
+    const quick = Store.get("quickNote");
+    const at = quick.toLowerCase().indexOf(q);
     if (at !== -1) {
-      const snippet = (at > 20 ? "…" : "") + note.slice(Math.max(0, at - 20), at + q.length + 40).replace(/\s+/g, " ");
-      groups.push({ label: "Notes", items: [{ text: snippet, icon: "notebook-pen", page: "notes" }] });
+      const snippet = (at > 20 ? "…" : "") + quick.slice(Math.max(0, at - 20), at + q.length + 40).replace(/\s+/g, " ");
+      noteItems.push({ text: snippet, icon: "notebook-pen", page: "dashboard", hint: "Quick note" });
     }
+    if (noteItems.length) groups.push({ label: "Notes", items: noteItems });
 
     const links = Store.get("links").filter((l) => has(l.name) || has(l.url)).slice(0, 6);
     if (links.length) groups.push({ label: "Links", items: links.map((l) => ({ text: l.name, icon: "external-link", url: Links.normalizeUrl(l.url), hint: "Opens in new tab" })) });
@@ -198,7 +213,7 @@ const Shell = {
       ? groups.map((g) => `
           <div class="search-group">${g.label}</div>
           ${g.items.map((item) => `
-            <button class="menu-item" type="button" data-page="${item.page || ""}" data-id="${UI.escape(item.id || "")}"
+            <button class="menu-item" type="button" data-page="${item.page || ""}" data-id="${UI.escape(item.id || "")}" data-date="${item.date || ""}"
                     ${item.url ? `data-url="${UI.escape(item.url)}"` : ""}>
               ${icon(item.icon)}<span class="result-text">${mark(item.text)}</span>${item.hint ? `<small>${item.hint}</small>` : ""}
             </button>`).join("")}`).join("")
@@ -218,13 +233,24 @@ const Shell = {
     button.setAttribute("aria-label", "Quick add");
 
     const actions = [
-      { id: "task", label: "New task", icon: "square-check-big" },
-      { id: "habit", label: "New habit", icon: "flame" },
-      { id: "link", label: "New favorite link", icon: "link" },
-      { id: "note", label: "Write in quick note", icon: "notebook-pen" },
+      { id: "task", label: "New task", icon: "square-check-big", key: "T" },
+      { id: "event", label: "New event", icon: "calendar", key: "E" },
+      { id: "note", label: "New note", icon: "file-text", key: "N" },
+      { id: "habit", label: "New habit", icon: "flame", key: "H" },
+      { id: "link", label: "New favorite link", icon: "link", key: "L" },
     ];
     menu.innerHTML = actions.map((a) => `
-      <button class="menu-item" type="button" role="menuitem" data-action="${a.id}">${icon(a.icon)}${a.label}</button>`).join("");
+      <button class="menu-item" type="button" role="menuitem" data-action="${a.id}">${icon(a.icon)}${a.label}<small>${a.key}</small></button>`).join("");
+
+    // While the menu is open, a letter key picks the action (T, E, N, H, L)
+    menu.addEventListener("keydown", (event) => {
+      const action = actions.find((a) => a.key === event.key.toUpperCase());
+      if (action) {
+        event.preventDefault();
+        this.closeQuickAdd();
+        this.quickAdd(action.id);
+      }
+    });
 
     button.addEventListener("click", () => {
       const open = menu.hidden;
@@ -248,24 +274,33 @@ const Shell = {
 
   async quickAdd(type) {
     if (type === "note") {
-      Router.go("notes");
-      setTimeout(() => document.querySelector("[data-note-input]")?.focus(), 50);
+      const note = Notes.create({});
+      Notes.state.query = "";
+      Notes.state.category = "all";
+      Router.go("notes", note.id);
+      setTimeout(() => document.querySelector('.note-editor [data-field="title"]')?.focus(), 50);
       return;
     }
 
     let created = null;
     let page = "";
+    const quiet = { quiet: true }; // we show our own toast below
 
     if (type === "task") {
-      const values = await UI.form({ title: "New task", submitLabel: "Add task",
-        fields: [{ name: "title", label: "Task", placeholder: "What do you need to do?", required: true }] });
-      if (values) { created = Tasks.add(values.title); page = "tasks"; }
+      created = await Tasks.openEditor(null, {}, quiet);
+      page = "tasks";
+      if (created) { Tasks.state.filter = "all"; Tasks.state.category = "all"; }
+    }
+
+    if (type === "event") {
+      created = await Calendar.openEditor(null, {}, quiet);
+      page = "calendar";
+      if (created) { Calendar.state.selected = created.date; Calendar.state.cursor = created.date; }
     }
 
     if (type === "habit") {
-      const values = await UI.form({ title: "New habit", submitLabel: "Add habit",
-        fields: [{ name: "name", label: "Habit", placeholder: "e.g. Drink 2L of water", required: true }] });
-      if (values) { created = Habits.add(values.name); page = "habits"; }
+      created = await Habits.openEditor(null, quiet);
+      page = "habits";
     }
 
     if (type === "link") {
@@ -278,12 +313,12 @@ const Shell = {
       if (values) { created = Links.add(values.name, Links.normalizeUrl(values.url)); page = "dashboard"; }
     }
 
-    if (!created) return; // cancelled
+    if (!created || typeof created !== "object") return; // cancelled
 
     // If the new item is visible on the current page, redraw and highlight it.
     // Otherwise offer a button to go and see it.
     const current = Router.currentId();
-    const label = { task: "Task", habit: "Habit", link: "Link" }[type];
+    const label = { task: "Task", event: "Event", habit: "Habit", link: "Link" }[type];
     if (current === page || current === "dashboard") {
       Router.refresh(created.id);
       UI.toast(`${label} added`);
@@ -306,6 +341,7 @@ const Shell = {
       if (event.key === "Escape" && !document.querySelector(".modal-backdrop")) {
         this.closeSearch();
         this.closeQuickAdd();
+        Notifications.close();
         this.closeMobileNav();
         if (event.target.id === "search-input") event.target.blur();
       }

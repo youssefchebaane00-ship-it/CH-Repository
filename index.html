@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/widgets.css">
+  <link rel="stylesheet" href="css/pages.css">
   <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
@@ -61,7 +62,7 @@
         <div class="search" id="search">
           <span class="search-icon" id="search-icon"></span>
           <input id="search-input" type="search" placeholder="Search…  (Ctrl+K)" autocomplete="off"
-                 aria-label="Search tasks, habits, notes and links">
+                 aria-label="Search tasks, events, habits, notes and links">
           <div class="dropdown search-results" id="search-results" hidden></div>
         </div>
 
@@ -69,6 +70,10 @@
           <div class="quick-add">
             <button class="btn btn-primary" id="quick-add-button" type="button" aria-haspopup="menu" aria-expanded="false"></button>
             <div class="dropdown quick-add-menu" id="quick-add-menu" role="menu" hidden></div>
+          </div>
+          <div class="notifications">
+            <button class="btn-icon bell" id="notifications-button" type="button" aria-haspopup="true" aria-expanded="false"></button>
+            <div class="dropdown notifications-panel" id="notifications-panel" hidden></div>
           </div>
           <button class="btn-icon" id="theme-button" type="button"></button>
         </div>
@@ -93,6 +98,8 @@
   <script src="js/widgets/notes.js"></script>
   <script src="js/widgets/links.js"></script>
   <script src="js/widgets/weather.js"></script>
+  <script src="js/widgets/calendar.js"></script>
+  <script src="js/notifications.js"></script>
   <script src="js/views.js"></script>
   <script src="js/router.js"></script>
   <script src="js/shell.js"></script>

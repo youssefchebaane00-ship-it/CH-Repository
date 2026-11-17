@@ -13,8 +13,10 @@ const Store = {
 
   // What each collection looks like when nothing is saved yet
   DEFAULTS: {
-    tasks: [],        // { id, title, done, createdAt, completedAt }
-    habits: [],       // { id, name, doneDays: ["2026-11-17", ...], createdAt }
+    tasks: [],        // { id, title, description, priority, dueDate, category, tags, done, createdAt, completedAt }
+    habits: [],       // { id, name, frequency: "daily"|"weekly", weeklyTarget, doneDays: ["2026-11-17", ...], createdAt }
+    events: [],       // { id, title, description, date, startTime, endTime, type }
+    notes: [],        // { id, title, content, category, tags, pinned, createdAt, updatedAt }
     links: [          // { id, name, url }
       { id: "default-google", name: "Google", url: "https://www.google.com" },
       { id: "default-youtube", name: "YouTube", url: "https://www.youtube.com" },
@@ -27,6 +29,29 @@ const Store = {
       profileName: "",
       sidebarCollapsed: false,
     },
+  },
+
+  // Fill in fields that older saved items don't have yet. This runs every
+  // time a list is loaded, so old data always matches the newest format.
+  NORMALIZE: {
+    tasks: (t) => ({
+      description: "", priority: "medium", dueDate: null, category: "other",
+      done: false, createdAt: null, completedAt: null,
+      ...t,
+      tags: Array.isArray(t.tags) ? t.tags : [],
+    }),
+    habits: (h) => ({
+      frequency: "daily", weeklyTarget: 3, createdAt: null,
+      ...h,
+      doneDays: Array.isArray(h.doneDays) ? h.doneDays.filter((d) => typeof d === "string") : [],
+    }),
+    events: (e) => ({ description: "", startTime: "", endTime: "", type: "event", ...e }),
+    notes: (n) => ({
+      title: "", content: "", category: "personal", pinned: false, createdAt: null, updatedAt: null,
+      ...n,
+      tags: Array.isArray(n.tags) ? n.tags : [],
+    }),
+    links: (l) => ({ ...l }),
   },
 
   cache: {},          // data already read, so we don't parse JSON every time
@@ -44,6 +69,12 @@ const Store = {
       }
       if (value === undefined) value = structuredClone(this.DEFAULTS[name]);
 
+      // Lists: drop broken entries and fill in missing fields
+      if (this.NORMALIZE[name]) {
+        if (!Array.isArray(value)) value = structuredClone(this.DEFAULTS[name]);
+        value = value.filter((item) => item && typeof item === "object" && item.id).map(this.NORMALIZE[name]);
+      }
+
       // Settings: fill in any option added in a newer version
       if (name === "settings") value = { ...this.DEFAULTS.settings, ...value };
       this.cache[name] = value;
@@ -53,6 +84,7 @@ const Store = {
 
   // Save a collection, then tell listeners (e.g. statistics) that data changed
   set(name, value) {
+    if (this.NORMALIZE[name] && Array.isArray(value)) value = value.map(this.NORMALIZE[name]);
     this.cache[name] = value;
     try {
       localStorage.setItem(this.PREFIX + name, JSON.stringify(value));
@@ -160,6 +192,8 @@ const Store = {
       data: {
         tasks: this.get("tasks"),
         habits: this.get("habits"),
+        events: this.get("events"),
+        notes: this.get("notes"),
         links: this.get("links"),
         quickNote: this.get("quickNote"),
         settings: this.get("settings"),

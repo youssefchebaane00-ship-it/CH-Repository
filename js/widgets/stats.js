@@ -10,20 +10,23 @@ const Stats = {
     const tasks = Store.get("tasks");
     const habits = Store.get("habits");
 
-    const doneToday = tasks.filter((t) => t.completedAt && UI.dateKey(new Date(t.completedAt)) === today).length;
+    const doneToday = tasks.filter((t) => Tasks.completedToday(t)).length;
     const remaining = tasks.filter((t) => !t.done).length;
-    const habitsDone = habits.filter((h) => h.doneDays.includes(today)).length;
-    const bestStreak = habits.reduce((best, h) => Math.max(best, Habits.countStreak(h.doneDays)), 0);
+    const overdue = tasks.filter((t) => Tasks.isOverdue(t)).length;
+    const focusOpen = tasks.filter((t) => !t.done && Tasks.isFocus(t)).length; // on today's list
+    const habitsDone = habits.filter((h) => Habits.doneForToday(h)).length;
+    const bestHabit = habits.reduce((best, h) => {
+      const n = Habits.countStreak(h);
+      return n > best.n ? { n, habit: h } : best;
+    }, { n: 0, habit: null });
 
-    // 7-day consistency: of all the habit check-ins that were possible in
-    // the last 7 days, how many did you do? (A habit only counts from the
-    // day it was created, so new habits don't drag the number down.)
+    // 7-day consistency (daily habits): of all the check-ins that were possible
+    // in the last 7 days, how many did you do? A habit only counts from the
+    // day it was created, so new habits don't drag the number down.
     let possible = 0;
     let checked = 0;
-    for (const habit of habits) {
-      const firstDay = habit.createdAt
-        ? UI.dateKey(new Date(habit.createdAt))
-        : [...habit.doneDays].sort()[0] || today;
+    for (const habit of habits.filter((h) => !Habits.isWeekly(h))) {
+      const firstDay = Habits.firstDay(habit);
       for (let i = 0; i < 7; i++) {
         const day = UI.daysAgoKey(i);
         if (day < firstDay) continue; // "2026-11-10" < "2026-11-12" works for this date format
@@ -33,12 +36,13 @@ const Stats = {
     }
     const consistency = possible ? Math.round((checked / possible) * 100) : null;
 
-    // Today's progress = (tasks finished today + habits done today) out of everything for today
-    const dailyTotal = doneToday + remaining + habits.length;
+    // Today's progress = (tasks finished today + habits done today)
+    // out of (that + tasks still on today's list + habits still to do)
+    const dailyTotal = doneToday + focusOpen + habits.length;
     const dailyDone = doneToday + habitsDone;
     const dailyPercent = dailyTotal ? Math.round((dailyDone / dailyTotal) * 100) : 0;
 
-    return { tasks, habits, doneToday, remaining, habitsDone, bestStreak, consistency, dailyTotal, dailyDone, dailyPercent };
+    return { tasks, habits, doneToday, remaining, overdue, focusOpen, habitsDone, bestHabit, consistency, dailyTotal, dailyDone, dailyPercent };
   },
 
   // The 4 summary cards on the dashboard
@@ -71,12 +75,12 @@ const Stats = {
       doneToday: s.doneToday,
       doneTodaySub: s.doneToday ? "Nice work, keep going!" : "No tasks finished yet today",
       remaining: s.remaining,
-      remainingSub: `${plural(s.tasks.length, "task")} in total`,
-      tasksLeft: `${s.remaining} left`,
+      remainingSub: s.overdue ? `⚠ ${s.overdue} overdue` : `${plural(s.tasks.length, "task")} in total`,
+      tasksLeft: `${s.focusOpen} left`,
       habitsToday: s.habits.length ? `${s.habitsDone}/${s.habits.length}` : "0",
-      habitsSub: s.bestStreak ? `Best current streak: ${plural(s.bestStreak, "day")}` : "Tick a habit to start a streak",
+      habitsSub: s.bestHabit.n ? `Best current streak: ${Habits.unit(s.bestHabit.habit, s.bestHabit.n)}` : "Tick a habit to start a streak",
       consistency: s.consistency === null ? "–" : `${s.consistency}%`,
-      consistencySub: s.consistency === null ? "Add habits to measure this" : "Habit check-ins, last 7 days",
+      consistencySub: s.consistency === null ? "Add daily habits to measure this" : "Daily habit check-ins, last 7 days",
       dailyPercent: `${s.dailyPercent}%`,
       dailySub: s.dailyTotal ? `${s.dailyDone} of ${s.dailyTotal} done` : "add a task or habit",
     };
