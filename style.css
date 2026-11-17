@@ -1,15 +1,40 @@
 /* =========================================
    Colors in one place: change these to restyle everything
    ========================================= */
+
+/* Light mode (the default) */
 :root {
-  --background: #f1f5f9;
+  color-scheme: light;      /* tells the browser to draw scrollbars etc. in light style */
+  --background: #f0f7f6;
   --card: #ffffff;
+  --input: #ffffff;
   --text: #1e293b;
   --muted: #64748b;
-  --accent: #4f46e5;
-  --accent-soft: #eef2ff;
+  --accent: #0d9488;        /* ocean teal */
+  --accent-soft: #e6f6f4;
+  --on-accent: #ffffff;     /* text color on top of accent-colored buttons */
   --border: #e2e8f0;
   --danger: #dc2626;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Dark mode: kicks in automatically when Windows (or your phone) is set to dark.
+   We only swap the color values; every other rule stays the same. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: #0b1416;
+    --card: #15222a;
+    --input: #0f1a20;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #2dd4bf;      /* a brighter teal, easier to see on dark */
+    --accent-soft: #123b3a;
+    --on-accent: #042f2e;   /* dark text on the bright teal button */
+    --border: #263640;
+    --danger: #f87171;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
 }
 
 /* Remove the browser's default spacing so we control it ourselves */
@@ -41,7 +66,7 @@ body {
   background: var(--card);
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow);
 }
 
 .card h2 {
@@ -59,6 +84,7 @@ textarea {
   font-size: 1rem;
   font-family: inherit;
   color: var(--text);
+  background: var(--input);
   width: 100%;
 }
 
@@ -70,7 +96,7 @@ textarea:focus {
 
 button {
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   border: none;
   border-radius: 8px;
   padding: 10px 16px;
