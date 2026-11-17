@@ -155,6 +155,7 @@ const Shell = {
       // Make sure the item will be visible on its page
       if (item.dataset.page === "tasks") { Tasks.state.filter = "all"; Tasks.state.category = "all"; }
       if (item.dataset.page === "notes") { Notes.state.query = ""; Notes.state.category = "all"; }
+      if (item.dataset.page === "goals") { Goals.state.horizon = "all"; Goals.state.category = "all"; }
       if (item.dataset.date) { Calendar.state.selected = item.dataset.date; Calendar.state.cursor = item.dataset.date; }
       Router.go(item.dataset.page, item.dataset.id || null);
     });
@@ -193,6 +194,17 @@ const Shell = {
       noteItems.push({ text: snippet, icon: "notebook-pen", page: "dashboard", hint: "Quick note" });
     }
     if (noteItems.length) groups.push({ label: "Notes", items: noteItems });
+
+    const goals = Goals.all().filter((g) => has(g.title) || has(g.description)).slice(0, 6);
+    if (goals.length) groups.push({ label: "Goals", items: goals.map((g) => ({
+      text: g.title, icon: g.status === "completed" ? "trophy" : "target", page: "goals", id: g.id, hint: g.status === "completed" ? "Completed" : `${g.progress}%` })) });
+
+    const expenses = Expenses.all()
+      .filter((e) => has(e.description) || has(Expenses.CATEGORIES[e.category]?.label || ""))
+      .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+    if (expenses.length) groups.push({ label: "Expenses", items: expenses.map((e) => ({
+      text: e.description || Expenses.CATEGORIES[e.category].label, icon: Expenses.CATEGORIES[e.category]?.icon || "receipt",
+      page: "expenses", id: e.id, hint: `${Expenses.format(e.amount)} · ${UI.formatDay(e.date)}` })) });
 
     const links = Store.get("links").filter((l) => has(l.name) || has(l.url)).slice(0, 6);
     if (links.length) groups.push({ label: "Links", items: links.map((l) => ({ text: l.name, icon: "external-link", url: Links.normalizeUrl(l.url), hint: "Opens in new tab" })) });
@@ -241,13 +253,15 @@ const Shell = {
       { id: "event", label: "New event", icon: "calendar", key: "E" },
       { id: "note", label: "New note", icon: "file-text", key: "N" },
       { id: "study", label: "Start study session", icon: "hourglass", key: "S" },
+      { id: "expense", label: "Add expense", icon: "wallet", key: "X" },
+      { id: "goal", label: "New goal", icon: "target", key: "G" },
       { id: "habit", label: "New habit", icon: "flame", key: "H" },
       { id: "link", label: "New favorite link", icon: "link", key: "L" },
     ];
     menu.innerHTML = actions.map((a) => `
       <button class="menu-item" type="button" role="menuitem" data-action="${a.id}">${icon(a.icon)}${a.label}<small>${a.key}</small></button>`).join("");
 
-    // While the menu is open, a letter key picks the action (T, E, N, H, L)
+    // While the menu is open, a letter key picks the action (the letter shown on the right)
     menu.addEventListener("keydown", (event) => {
       const action = actions.find((a) => a.key === event.key.toUpperCase());
       if (action) {
@@ -333,13 +347,20 @@ const Shell = {
     }
 
     if (type === "link") {
-      const values = await UI.form({ title: "New favorite link", submitLabel: "Add link",
-        fields: [
-          { name: "name", label: "Name", placeholder: "e.g. GitHub", required: true },
-          { name: "url", label: "Address", placeholder: "e.g. github.com", required: true,
-            validate: (v) => (Links.normalizeUrl(v) ? "" : "Enter a valid web address, like github.com") },
-        ] });
-      if (values) { created = Links.add(values.name, Links.normalizeUrl(values.url)); page = "dashboard"; }
+      created = await Links.openEditor(null, quiet);
+      page = "dashboard";
+    }
+
+    if (type === "goal") {
+      created = await Goals.openEditor(null, {}, quiet);
+      page = "goals";
+      if (created) { Goals.state.horizon = "all"; Goals.state.category = "all"; }
+    }
+
+    if (type === "expense") {
+      created = await Expenses.openEditor(null, {}, quiet);
+      page = "expenses";
+      if (created && typeof created === "object") { Expenses.state.month = Expenses.monthKey(created.date); Expenses.state.category = "all"; }
     }
 
     if (!created || typeof created !== "object") return; // cancelled
@@ -347,8 +368,9 @@ const Shell = {
     // If the new item is visible on the current page, redraw and highlight it.
     // Otherwise offer a button to go and see it.
     const current = Router.currentId();
-    const label = { task: "Task", event: "Event", habit: "Habit", link: "Link" }[type];
-    if (current === page || current === "dashboard") {
+    const label = { task: "Task", event: "Event", habit: "Habit", link: "Link", goal: "Goal", expense: "Expense" }[type];
+    const onDashboard = ["tasks", "habits", "calendar", "dashboard"].includes(page); // goals/expenses aren't shown there
+    if (current === page || (current === "dashboard" && onDashboard)) {
       Router.refresh(created.id);
       UI.toast(`${label} added`);
     } else {

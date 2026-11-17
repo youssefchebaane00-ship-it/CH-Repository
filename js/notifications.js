@@ -27,6 +27,25 @@ const Notifications = {
       tone: "sky", icon: Calendar.TYPES[e.type]?.icon || "calendar", text: e.title, sub: `Tomorrow · ${Calendar.timeLabel(e)}`, page: "calendar", id: e.id, date: e.date,
     }));
 
+    // Goals whose target date is today or has passed
+    Goals.all().filter((g) => g.status === "active" && g.targetDate && g.targetDate <= today)
+      .sort((a, b) => a.targetDate.localeCompare(b.targetDate)).slice(0, 3)
+      .forEach((g) => items.push({
+        tone: g.targetDate < today ? "danger" : "violet", icon: "target", text: g.title,
+        sub: `Goal ${g.targetDate < today ? "overdue" : "due today"} · ${g.progress}% done`, page: "goals", id: g.id,
+      }));
+
+    // Monthly budget
+    const budget = Number(Store.get("settings").monthlyBudget) || 0;
+    if (budget) {
+      const spent = Expenses.sum(Expenses.inMonth(Expenses.monthKey(today)));
+      if (spent >= budget * 0.8) items.push({
+        tone: spent > budget ? "danger" : "amber", icon: "piggy-bank",
+        text: spent > budget ? "Over your monthly budget" : `${Math.round((spent / budget) * 100)}% of monthly budget used`,
+        sub: `${Expenses.format(spent)} of ${Expenses.format(budget)}`, page: "expenses",
+      });
+    }
+
     // Running timers (not urgent, just a reminder they're on)
     const active = Study.activeSession();
     if (active) items.push({
@@ -68,6 +87,8 @@ const Notifications = {
         Tasks.state.filter = target.filter || "all";
         Tasks.state.category = "all";
       }
+      if (target.page === "goals") { Goals.state.horizon = "all"; Goals.state.category = "all"; }
+      if (target.page === "expenses") { Expenses.state.month = Expenses.monthKey(UI.dateKey()); }
       if (target.page === "calendar" && target.date) {
         Calendar.state.selected = target.date;
         Calendar.state.cursor = target.date;

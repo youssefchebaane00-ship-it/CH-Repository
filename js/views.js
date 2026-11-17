@@ -11,10 +11,8 @@ const NAV = [
   { id: "habits", label: "Habits", icon: "flame" },
   { id: "study", label: "Study Tracker", icon: "graduation-cap" },
   { id: "notes", label: "Notes", icon: "notebook-pen" },
-  { id: "goals", label: "Goals", icon: "target", phase: 4,
-    plans: ["Daily, weekly, monthly and long-term goals", "Progress tracking and target dates", "Active and recently completed goals"] },
-  { id: "expenses", label: "Expenses", icon: "wallet", phase: 4,
-    plans: ["Expenses in TND (changeable)", "Spending by category and month", "Optional monthly budget"] },
+  { id: "goals", label: "Goals", icon: "target" },
+  { id: "expenses", label: "Expenses", icon: "wallet" },
   { id: "analytics", label: "Analytics", icon: "chart-column", phase: 5,
     plans: ["Tasks completed over time", "Study hours and habit completion charts", "Daily, weekly and monthly views"] },
   { id: "settings", label: "Settings", icon: "settings" },
@@ -62,6 +60,14 @@ const Views = {
 
   study(container) {
     Study.renderPage(container);
+  },
+
+  goals(container) {
+    Goals.renderPage(container);
+  },
+
+  expenses(container) {
+    Expenses.renderPage(container);
   },
 
   notes(container) {
@@ -139,6 +145,23 @@ const Views = {
         </section>
 
         <section class="card">
+          <div class="card-header"><h3 class="card-title"><span class="card-icon amber">${icon("wallet")}</span>Money</h3></div>
+          <form class="setting-row" data-currency-form>
+            <div class="setting-text"><strong>Currency</strong><span>Used to display expenses. Amounts are not converted.</span></div>
+            <div class="setting-control">
+              <select class="input" name="currency" aria-label="Currency">
+                ${Expenses.CURRENCIES.map((c) => `<option value="${c}"${c === settings.currency ? " selected" : ""}>${c}${c === "TND" ? " (Tunisian dinar)" : ""}</option>`).join("")}
+              </select>
+              <button class="btn btn-secondary" type="submit">Save</button>
+            </div>
+          </form>
+          <div class="setting-row">
+            <div class="setting-text"><strong>Monthly budget</strong><span data-budget-text>${settings.monthlyBudget ? Expenses.format(settings.monthlyBudget) : "No budget set"}</span></div>
+            <button class="btn btn-secondary" type="button" data-budget>${icon("piggy-bank")}Change budget</button>
+          </div>
+        </section>
+
+        <section class="card">
           <div class="card-header"><h3 class="card-title"><span class="card-icon emerald">${icon("download")}</span>Your data</h3></div>
           <div class="setting-row">
             <div class="setting-text">
@@ -210,6 +233,24 @@ const Views = {
         .forEach(([key, value]) => { pomoForm.elements[key].value = value; });
     });
     container.querySelector("[data-test-sound]").addEventListener("click", () => Sound.chime());
+
+    // Money settings
+    const budgetText = container.querySelector("[data-budget-text]");
+    container.querySelector("[data-currency-form]").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const currency = event.target.elements.currency.value;
+      if (!Expenses.CURRENCIES.includes(currency)) return;
+      Store.setSetting("currency", currency);
+      const budget = Store.get("settings").monthlyBudget;
+      budgetText.textContent = budget ? Expenses.format(budget) : "No budget set";
+      UI.toast(`Currency set to ${currency}`);
+    });
+    container.querySelector("[data-budget]").addEventListener("click", async () => {
+      if (await Expenses.openBudgetEditor()) {
+        const budget = Store.get("settings").monthlyBudget;
+        budgetText.textContent = budget ? Expenses.format(budget) : "No budget set";
+      }
+    });
 
     container.querySelector("[data-export]").addEventListener("click", () => {
       // Turn the data into a file and "click" a hidden download link

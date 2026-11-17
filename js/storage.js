@@ -19,12 +19,14 @@ const Store = {
     notes: [],        // { id, title, content, category, tags, pinned, createdAt, updatedAt }
     subjects: [],     // { id, name, color, weeklyGoalHours, createdAt }
     studySessions: [],// { id, subjectId, description, date, startedAt, durationSec, source: "timer"|"pomodoro"|"manual" }
+    goals: [],        // { id, title, description, category, horizon, targetDate, progress, status, createdAt, completedAt }
+    expenses: [],     // { id, amount, category, date, description, createdAt }
     activeSession: null, // the running study stopwatch (see study.js)
     pomodoro: null,      // the Pomodoro timer state (see pomodoro.js)
-    links: [          // { id, name, url }
-      { id: "default-google", name: "Google", url: "https://www.google.com" },
-      { id: "default-youtube", name: "YouTube", url: "https://www.youtube.com" },
-      { id: "default-gmail", name: "Gmail", url: "https://mail.google.com" },
+    links: [          // { id, name, url, category }
+      { id: "default-google", name: "Google", url: "https://www.google.com", category: "tools" },
+      { id: "default-youtube", name: "YouTube", url: "https://www.youtube.com", category: "entertainment" },
+      { id: "default-gmail", name: "Gmail", url: "https://mail.google.com", category: "tools" },
     ],
     quickNote: "",
     settings: {
@@ -37,6 +39,8 @@ const Store = {
       pomodoroLong: 15,
       pomodoroLongEvery: 4,   // a long break after every 4 focus sessions
       pomodoroSound: true,
+      currency: "TND",
+      monthlyBudget: 0,       // 0 = no budget
     },
   },
 
@@ -60,7 +64,19 @@ const Store = {
       ...n,
       tags: Array.isArray(n.tags) ? n.tags : [],
     }),
-    links: (l) => ({ ...l }),
+    links: (l) => ({ category: "other", ...l }),
+    goals: (g) => ({
+      description: "", category: "personal", horizon: "monthly", targetDate: null, status: "active",
+      createdAt: null, completedAt: null,
+      ...g,
+      progress: Math.min(100, Math.max(0, Math.round(Number(g.progress) || 0))),
+    }),
+    expenses: (e) => ({
+      category: "other", description: "", createdAt: null,
+      ...e,
+      amount: Math.max(0, Math.round((Number(e.amount) || 0) * 1000) / 1000), // up to 3 decimals (millimes)
+      date: typeof e.date === "string" ? e.date : UI.dateKey(),
+    }),
     subjects: (s) => ({ name: "Subject", color: "#22d3ee", weeklyGoalHours: 0, createdAt: null, ...s }),
     studySessions: (s) => ({
       subjectId: "", description: "", source: "manual", startedAt: null,
@@ -212,6 +228,8 @@ const Store = {
         notes: this.get("notes"),
         subjects: this.get("subjects"),
         studySessions: this.get("studySessions"),
+        goals: this.get("goals"),
+        expenses: this.get("expenses"),
         links: this.get("links"),
         quickNote: this.get("quickNote"),
         settings: this.get("settings"),

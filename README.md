@@ -19,16 +19,18 @@ Tip: bookmark it or set it as your browser's home page.
 - **Study Tracker:** subjects with colors and weekly goals; a study stopwatch (start, pause, resume, stop & save, with the duration checked before saving); manual sessions; totals for today, this week, this month and per subject; a 7-day chart and session history
 - **Pomodoro:** 25/5/15 by default (changeable in Settings), start/pause/resume/reset/skip, long break after every 4 focus sessions, chime when a period ends, daily counter. Finished focus periods are logged to the chosen subject automatically.
 - Running timers keep going across pages, refreshes and closed tabs, and show in the top bar and the browser tab title
+- **Goals:** daily, weekly, monthly and long-term goals with category, target date and a progress slider. 100% completes a goal (with confetti). Shows active and recently completed goals, and completed goals can be reopened.
+- **Expenses:** amount (TND with 3 decimals by default, changeable in Settings), category, date and description. Month by month: total vs last month, optional monthly budget with warnings, daily average, spending by category, 6-month chart and transactions with edit, delete and Undo.
 - **Notifications** (bell): overdue tasks, tasks and events today, tomorrow's events, habits left today
 - **Weather:** current weather for any city (default: Tunis), via [Open-Meteo](https://open-meteo.com/) (free, no API key)
-- **Favorite links**
-- **Global search** (`Ctrl+K` or `/`) across tasks, events, habits, notes and links
-- **Quick add** for tasks, events, notes, habits and links (keys T, E, N, H, L while the menu is open)
+- **Favorite links:** categories, editing, and each site's own icon (loaded directly from the site, never through a third-party service)
+- **Global search** (`Ctrl+K` or `/`) across tasks, events, habits, notes, subjects, goals, expenses and links
+- **Quick add** for tasks, events, notes, study sessions, expenses, goals, habits and links (keys T, E, N, S, X, G, H, L while the menu is open)
 - **Dark theme by default**, with a light theme. Your choice is remembered.
 - **Settings:** theme, your name, default weather city, **backup export (JSON)**
 - Works on desktop, tablet and phone. Respects the system "reduce motion" setting.
 
-Goals, Expenses and Analytics are marked **"Soon"** in the sidebar and come in later phases.
+Analytics is marked **"Soon"** in the sidebar and come in later phases.
 
 ## Your data
 
@@ -45,6 +47,7 @@ css/
   widgets.css         styles for specific widgets and pages
   pages.css           tasks, calendar, habits, notes and notification styles
   study.css           Study Tracker, Pomodoro and timer pill styles
+  personal.css        goals, expenses and favorite links styles
   animations.css      all animations + reduced-motion support
 js/
   icons.js            Lucide icons (copied in, so they work offline)
