@@ -17,6 +17,7 @@
   --danger: #dc2626;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   --glow: 0 12px 28px rgba(13, 148, 136, 0.18);   /* teal glow when hovering a card */
+  --sky-strength: 0.35;     /* how strongly the time-of-day colors show */
 }
 
 /* Dark mode colors. They're used in two situations:
@@ -37,6 +38,7 @@
   --danger: #f87171;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   --glow: 0 12px 28px rgba(45, 212, 191, 0.15);
+  --sky-strength: 0.22;
 }
 
 /* Same colors again, used automatically when Windows is dark,
@@ -56,6 +58,7 @@
     --danger: #f87171;
     --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   --glow: 0 12px 28px rgba(45, 212, 191, 0.15);
+  --sky-strength: 0.22;
   }
 }
 
@@ -72,6 +75,34 @@ body {
   color: var(--text);
   min-height: 100vh;
   padding: 40px 16px;
+}
+
+/* =========================================
+   TIME-OF-DAY SKY
+   A colored layer behind everything. script.js sets
+   <html data-period="morning|afternoon|evening|night"> from the clock,
+   and each period has its own gradient.
+   ========================================= */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;              /* cover the whole window */
+  z-index: -1;           /* sit behind the cards */
+  pointer-events: none;  /* never block clicks */
+  opacity: var(--sky-strength);
+}
+
+[data-period="morning"] body::before {
+  background: linear-gradient(160deg, #fdba74 0%, #fecdd3 35%, #99f6e4 100%);  /* sunrise */
+}
+[data-period="afternoon"] body::before {
+  background: linear-gradient(160deg, #5eead4 0%, #7dd3fc 100%);               /* bright day */
+}
+[data-period="evening"] body::before {
+  background: linear-gradient(160deg, #fb923c 0%, #f472b6 45%, #a78bfa 100%);  /* sunset */
+}
+[data-period="night"] body::before {
+  background: linear-gradient(160deg, #1e3a8a 0%, #312e81 60%, #0f172a 100%);  /* night sky */
 }
 
 /* The dashboard is a grid: cards sit side by side, and wrap on small screens */
@@ -324,6 +355,61 @@ button:active {
   white-space: nowrap;
 }
 
+/* The 🔥 grows with the streak: level 1 = 3+ days, level 2 = 7+ days */
+.flame {
+  display: inline-block;
+  transition: font-size 0.3s ease;
+}
+
+.streak[data-level="1"] .flame {
+  font-size: 1.2em;
+}
+
+.streak[data-level="2"] .flame {
+  font-size: 1.45em;
+  animation: flicker 1.6s ease-in-out infinite;  /* a gently "burning" flame */
+}
+
+/* Today's progress bar */
+.progress {
+  margin-bottom: 14px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.progress-track {
+  height: 8px;
+  background: var(--accent-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.5s ease;   /* the bar slides to its new length */
+}
+
+/* When everything is done, the bar gets a moving shine */
+.progress.complete .progress-bar {
+  background: linear-gradient(90deg, var(--accent), #a7f3d0, var(--accent));
+  background-size: 200% 100%;
+  animation: shine 2s linear infinite;
+}
+
+.progress.complete #habit-progress-text {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 /* ===== Notes ===== */
 .notes {
   min-height: 180px;
@@ -406,6 +492,27 @@ button:active {
   to   { opacity: 1; }
 }
 
+/* Streak badge: a quick bounce when the number goes up */
+@keyframes bump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.3) rotate(-4deg); }
+  100% { transform: scale(1); }
+}
+
+/* Long-streak flame: grows and shrinks a little, like a real flame */
+@keyframes flicker {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50%      { transform: scale(1.12) rotate(4deg); }
+}
+
+/* Completed progress bar: the light stripe moves across */
+@keyframes shine {
+  from { background-position: 200% 0; }
+  to   { background-position: 0% 0; }
+}
+
+.bump { animation: bump 0.45s ease; display: inline-block; }
+
 /* script.js adds these classes at the right moment */
 .entering { animation: item-in 0.3s ease; }
 .leaving  { animation: item-out 0.25s ease forwards; pointer-events: none; }
@@ -428,6 +535,7 @@ button:active {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;  /* stops the looping flame and shine */
     animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
   }

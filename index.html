@@ -67,6 +67,17 @@
     <section class="card">
       <h2>🔥 Habits</h2>
 
+      <!-- Today's progress: filled in by script.js -->
+      <div id="habit-progress" class="progress">
+        <div class="progress-info">
+          <span>Today</span>
+          <span id="habit-progress-text">0 / 0</span>
+        </div>
+        <div class="progress-track">
+          <div id="habit-progress-bar" class="progress-bar"></div>
+        </div>
+      </div>
+
       <form id="habit-form" class="row-form">
         <input id="habit-input" type="text" placeholder="e.g. Drink water, Read 10 pages" autocomplete="off">
         <button type="submit">Add</button>

@@ -84,6 +84,68 @@ function removeWithAnimation(element, whenDone) {
   setTimeout(whenDone, 250); // 250 ms = the length of the animation in style.css
 }
 
+// 🎊 Confetti! Draws ~150 little colored paper pieces on a temporary
+// <canvas> (a drawing surface) that covers the screen, then removes it.
+function launchConfetti() {
+  if (reduceMotion.matches) return;
+
+  const canvas = document.createElement("canvas");
+  canvas.style.cssText = "position:fixed; inset:0; pointer-events:none; z-index:1000;";
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+
+  const colors = ["#0d9488", "#2dd4bf", "#fbbf24", "#f472b6", "#60a5fa", "#a78bfa"];
+  const pieces = [];
+
+  // Create the pieces: they all start in the middle and shoot outwards/upwards
+  for (let i = 0; i < 150; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 4 + Math.random() * 8;
+    pieces.push({
+      x: canvas.width / 2,
+      y: canvas.height / 3,
+      vx: Math.cos(angle) * speed,            // horizontal speed
+      vy: Math.sin(angle) * speed - 6,        // vertical speed (negative = up)
+      size: 6 + Math.random() * 6,
+      color: colors[i % colors.length],
+      rotation: Math.random() * Math.PI,
+      spin: (Math.random() - 0.5) * 0.3,
+    });
+  }
+
+  const startTime = performance.now();
+
+  // Draw one "frame", then ask the browser to call us again for the next one
+  function frame(now) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (const p of pieces) {
+      p.vy += 0.25;   // gravity pulls down a bit more every frame
+      p.vx *= 0.99;   // air slows them down slightly
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rotation += p.spin;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2); // a small rectangle
+      ctx.restore();
+    }
+
+    if (now - startTime < 3000) {
+      requestAnimationFrame(frame); // keep going for 3 seconds...
+    } else {
+      canvas.remove();              // ...then clean up
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
+
 
 // =========================================
 // THEME BUTTON: switch between light and dark
@@ -165,6 +227,18 @@ function updateClock() {
     greeting = "Good evening! 🌙";
   }
   document.getElementById("greeting").textContent = greeting;
+
+  // Tell the CSS which part of the day it is, so the background sky matches
+  let period;
+  if (hour >= 5 && hour < 11) period = "morning";
+  else if (hour >= 11 && hour < 17) period = "afternoon";
+  else if (hour >= 17 && hour < 21) period = "evening";
+  else period = "night";
+
+  // Only touch the page when the period actually changes (not every second)
+  if (document.documentElement.dataset.period !== period) {
+    document.documentElement.dataset.period = period;
+  }
 }
 
 updateClock();                   // run once right away...
@@ -330,7 +404,11 @@ function createTodoItem(todo) {
     todo.done = checkbox.checked;
     save("todos", todos);
     li.classList.toggle("done", todo.done); // CSS draws (or erases) the line smoothly
-    if (todo.done) replayAnimation(checkbox, "pop");
+    if (todo.done) {
+      replayAnimation(checkbox, "pop");
+      // Was that the last unfinished task? Celebrate!
+      if (todos.every((t) => t.done)) launchConfetti();
+    }
   });
 
   const deleteButton = makeDeleteButton("Delete task", () => {
@@ -399,9 +477,38 @@ function countStreak(doneDays) {
   return streak;
 }
 
-function streakText(habit) {
+// Fill in a streak badge: "🔥 3 days". The flame gets bigger for longer
+// streaks: data-level="1" from 3 days, "2" from 7 days (sizes are in style.css).
+function showStreak(badge, habit) {
   const days = countStreak(habit.doneDays);
-  return `🔥 ${days} day${days === 1 ? "" : "s"}`;
+
+  badge.innerHTML = "";
+  const flame = document.createElement("span");
+  flame.className = "flame";
+  flame.textContent = "🔥";
+  badge.append(flame, ` ${days} day${days === 1 ? "" : "s"}`);
+
+  badge.dataset.level = days >= 7 ? 2 : days >= 3 ? 1 : 0;
+  return days;
+}
+
+// Update the "Today 2 / 3" progress bar at the top of the habits card
+const habitProgress = document.getElementById("habit-progress");
+const habitProgressText = document.getElementById("habit-progress-text");
+const habitProgressBar = document.getElementById("habit-progress-bar");
+
+function updateHabitProgress() {
+  const today = dateKey(new Date());
+  const total = habits.length;
+  const done = habits.filter((h) => h.doneDays.includes(today)).length;
+
+  habitProgress.style.display = total === 0 ? "none" : "block"; // hide when there are no habits
+  habitProgressBar.style.width = total === 0 ? "0%" : (done / total) * 100 + "%";
+
+  const allDone = total > 0 && done === total;
+  habitProgress.classList.toggle("complete", allDone);
+  habitProgressText.textContent = allDone ? `🎉 ${done} / ${total} — all done!` : `${done} / ${total}`;
+  return allDone;
 }
 
 // Build ONE habit row (same idea as the to-do list)
@@ -413,7 +520,7 @@ function createHabitItem(habit) {
 
   const streak = document.createElement("span");
   streak.className = "streak";
-  streak.textContent = streakText(habit);
+  showStreak(streak, habit);
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
@@ -429,7 +536,15 @@ function createHabitItem(habit) {
     }
     save("habits", habits);
     li.classList.toggle("done", checkbox.checked);
-    streak.textContent = streakText(habit); // update just the badge
+
+    // Update just the badge; bounce it if the streak went up
+    const daysBefore = countStreak(habit.doneDays.filter((d) => d !== today));
+    const daysNow = showStreak(streak, habit);
+    if (daysNow > daysBefore) replayAnimation(streak, "bump");
+
+    // Fill the progress bar; confetti if this was the last habit for today
+    const allDone = updateHabitProgress();
+    if (checkbox.checked && allDone) launchConfetti();
   });
 
   const deleteButton = makeDeleteButton("Delete habit", () => {
@@ -439,6 +554,7 @@ function createHabitItem(habit) {
       habits = habits.filter((h) => h !== habit);
       save("habits", habits);
       updateEmptyMessage(habitList, habitEmpty);
+      updateHabitProgress();
     });
   });
 
@@ -459,11 +575,13 @@ habitForm.addEventListener("submit", (event) => {
   li.classList.add("entering");
   habitList.appendChild(li);
   updateEmptyMessage(habitList, habitEmpty);
+  updateHabitProgress();
   habitInput.value = "";
 });
 
 habits.forEach((habit) => habitList.appendChild(createHabitItem(habit)));
 updateEmptyMessage(habitList, habitEmpty);
+updateHabitProgress();
 
 
 // =========================================
