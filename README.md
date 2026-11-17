@@ -11,7 +11,7 @@ Tip: bookmark it or set it as your browser's home page.
 ## Features
 
 - **App layout:** collapsible sidebar, top bar, and pages that switch without reloading (the browser's back/forward buttons work)
-- **Dashboard:** greeting, live clock, daily quote, today's progress, 4 statistics from your real data, today's tasks, habits, upcoming events, weather, quick note, links
+- **Dashboard:** greeting, live clock, daily quote, today's progress, 5 statistics from your real data, and widgets you can show or hide: today's tasks, habits, study, upcoming events, weather, this week's productivity, quick note, links
 - **Tasks:** title, description, priority (High/Medium/Low), due date, category, tags. Filters (All, Today, Upcoming, Overdue, Completed), category filter, sorting, overdue warnings, edit dialog, delete with **Undo**
 - **Calendar:** month and week views, day agenda, events typed as Event, Deadline, Exam or Personal, with optional times. Tasks with due dates appear on their day. Double-click a day to add an event.
 - **Habits:** daily or weekly (“3× per week”) habits, current and longest streaks, completion rates, weekly and monthly check-in counts, 6-month heatmaps. History is never erased.
@@ -21,20 +21,23 @@ Tip: bookmark it or set it as your browser's home page.
 - Running timers keep going across pages, refreshes and closed tabs, and show in the top bar and the browser tab title
 - **Goals:** daily, weekly, monthly and long-term goals with category, target date and a progress slider. 100% completes a goal (with confetti). Shows active and recently completed goals, and completed goals can be reopened.
 - **Expenses:** amount (TND with 3 decimals by default, changeable in Settings), category, date and description. Month by month: total vs last month, optional monthly budget with warnings, daily average, spending by category, 6-month chart and transactions with edit, delete and Undo.
+- **Analytics:** daily (14 days), weekly (12 weeks) and monthly (12 months) views of tasks completed, study time (overall and per subject), habit completion rates and streaks, goals completed and spending, each compared with the previous period. Everything is calculated from your own data.
 - **Notifications** (bell): overdue tasks, tasks and events today, tomorrow's events, habits left today
-- **Weather:** current weather for any city (default: Tunis), via [Open-Meteo](https://open-meteo.com/) (free, no API key)
+- **Weather:** current weather and a 5-day forecast for any city (default: Tunis), via [Open-Meteo](https://open-meteo.com/) (free, no API key)
 - **Favorite links:** categories, editing, and each site's own icon (loaded directly from the site, never through a third-party service)
 - **Global search** (`Ctrl+K` or `/`) across tasks, events, habits, notes, subjects, goals, expenses and links
 - **Quick add** for tasks, events, notes, study sessions, expenses, goals, habits and links (keys T, E, N, S, X, G, H, L while the menu is open)
 - **Dark theme by default**, with a light theme. Your choice is remembered.
-- **Settings:** theme, your name, default weather city, **backup export (JSON)**
+- **Settings:** theme and accent color, which dashboard widgets to show, your name, weather city, Pomodoro durations and sound, currency and budget, backup export/import, delete all data
 - Works on desktop, tablet and phone. Respects the system "reduce motion" setting.
-
-Analytics is marked **"Soon"** in the sidebar and come in later phases.
+- **Keyboard:** `Ctrl+K` or `/` to search, `Q` for quick add, `?` for all shortcuts
 
 ## Your data
 
-Everything is saved in your browser's `localStorage`, only on this computer and in this browser. Use **Settings → Export JSON** now and then to keep a backup.
+Everything is saved in your browser's `localStorage`, only on this computer and in this browser. A different browser or computer starts empty.
+
+- **Back up:** Settings → Your data → **Export JSON**. Do this now and then.
+- **Restore:** Settings → Your data → **Import JSON**. The file is checked before anything changes, and your current data is downloaded as a safety copy first.
 
 ## Project structure
 
@@ -48,13 +51,15 @@ css/
   pages.css           tasks, calendar, habits, notes and notification styles
   study.css           Study Tracker, Pomodoro and timer pill styles
   personal.css        goals, expenses and favorite links styles
+  analytics.css       charts, weekly widget, forecast, settings extras
   animations.css      all animations + reduced-motion support
 js/
   icons.js            Lucide icons (copied in, so they work offline)
   storage.js          saving/loading data + upgrading data from older versions
   ui.js               shared helpers: toasts, dialogs, animations, confetti
   widgets/            one file per feature (tasks, calendar, habits, notes, links, weather, …)
-  notifications.js    the bell: reminders built from your tasks, events and habits
+  charts.js           bar charts made of plain HTML (no chart library)
+  notifications.js    the bell: reminders built from your tasks, events, habits, goals and budget
   views.js            one function per page + the sidebar menu list
   router.js           switches pages using the address (#/tasks, #/habits, …)
   shell.js            sidebar, theme toggle, search, quick add, keyboard shortcuts

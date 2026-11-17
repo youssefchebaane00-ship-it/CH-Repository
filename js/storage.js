@@ -41,6 +41,9 @@ const Store = {
       pomodoroSound: true,
       currency: "TND",
       monthlyBudget: 0,       // 0 = no budget
+      accent: "cyan",
+      // Which dashboard widgets are shown (Settings → Dashboard)
+      dashboardWidgets: { stats: true, tasks: true, habits: true, study: true, upcoming: true, week: true, weather: true, note: true, links: true },
     },
   },
 
@@ -108,7 +111,10 @@ const Store = {
       }
 
       // Settings: fill in any option added in a newer version
-      if (name === "settings") value = { ...this.DEFAULTS.settings, ...value };
+      if (name === "settings") {
+        value = { ...this.DEFAULTS.settings, ...value };
+        value.dashboardWidgets = { ...this.DEFAULTS.settings.dashboardWidgets, ...(value.dashboardWidgets || {}) };
+      }
       this.cache[name] = value;
     }
     return this.cache[name];
@@ -215,6 +221,98 @@ const Store = {
     } catch {}
   },
 
+  // The lists that go into a backup file
+  BACKUP_LISTS: ["tasks", "habits", "events", "notes", "subjects", "studySessions", "goals", "expenses", "links"],
+
+  // ---------------------------------------------------------
+  // IMPORT: check a backup file thoroughly BEFORE replacing anything.
+  // Returns { ok: true, data, summary } or { ok: false, error }.
+  // ---------------------------------------------------------
+  validateBackup(text) {
+    let file;
+    try {
+      file = JSON.parse(text);
+    } catch {
+      return { ok: false, error: "This file isn't valid JSON." };
+    }
+    if (!file || typeof file !== "object" || file.app !== "PersonalDashboard" || !file.data || typeof file.data !== "object") {
+      return { ok: false, error: "This isn't a PersonalDashboard backup file." };
+    }
+    if (typeof file.version !== "number" || file.version > this.VERSION) {
+      return { ok: false, error: "This backup comes from a newer version of the app." };
+    }
+
+    const data = {};
+    const summary = [];
+    for (const name of this.BACKUP_LISTS) {
+      const list = file.data[name];
+      if (list === undefined) { data[name] = structuredClone(this.DEFAULTS[name]); continue; } // older backups
+      if (!Array.isArray(list)) return { ok: false, error: `“${name}” should be a list.` };
+      if (list.length > 100000) return { ok: false, error: `“${name}” is suspiciously large.` };
+      const bad = list.find((item) => !item || typeof item !== "object" || Array.isArray(item) || typeof item.id !== "string" || !item.id);
+      if (bad !== undefined) return { ok: false, error: `“${name}” contains an invalid entry (every item needs an id).` };
+      if (new Set(list.map((item) => item.id)).size !== list.length) return { ok: false, error: `“${name}” contains duplicate ids.` };
+      data[name] = list.map(this.NORMALIZE[name]);
+      summary.push(`${list.length} ${name.replace(/([A-Z])/g, " $1").toLowerCase()}`);
+    }
+
+    const note = file.data.quickNote;
+    if (note !== undefined && typeof note !== "string") return { ok: false, error: "The quick note should be text." };
+    data.quickNote = note || "";
+
+    // Settings: keep only known options with sensible values
+    const s = file.data.settings && typeof file.data.settings === "object" ? file.data.settings : {};
+    const d = this.DEFAULTS.settings;
+    const num = (v, min, max, fallback) => (Number.isFinite(Number(v)) && Number(v) >= min && Number(v) <= max ? Number(v) : fallback);
+    data.settings = {
+      ...d,
+      theme: s.theme === "light" ? "light" : "dark",
+      weatherCity: typeof s.weatherCity === "string" && s.weatherCity.trim() ? s.weatherCity.slice(0, 80) : d.weatherCity,
+      profileName: typeof s.profileName === "string" ? s.profileName.slice(0, 40) : "",
+      sidebarCollapsed: Boolean(s.sidebarCollapsed),
+      pomodoroFocus: num(s.pomodoroFocus, 1, 120, d.pomodoroFocus),
+      pomodoroShort: num(s.pomodoroShort, 1, 60, d.pomodoroShort),
+      pomodoroLong: num(s.pomodoroLong, 1, 90, d.pomodoroLong),
+      pomodoroLongEvery: num(s.pomodoroLongEvery, 2, 10, d.pomodoroLongEvery),
+      pomodoroSound: s.pomodoroSound !== false,
+      currency: typeof s.currency === "string" && /^[A-Z]{3}$/.test(s.currency) ? s.currency : d.currency,
+      monthlyBudget: num(s.monthlyBudget, 0, 10000000, 0),
+      accent: typeof s.accent === "string" && /^[a-z]{3,10}$/.test(s.accent) ? s.accent : d.accent,
+      dashboardWidgets: { ...d.dashboardWidgets, ...(s.dashboardWidgets && typeof s.dashboardWidgets === "object" ? s.dashboardWidgets : {}) },
+    };
+
+    return { ok: true, data, summary, exportedAt: file.exportedAt };
+  },
+
+  // Replace everything with validated backup data
+  importAll(data) {
+    for (const name of [...this.BACKUP_LISTS, "quickNote", "settings"]) this.set(name, data[name]);
+    this.set("activeSession", null); // running timers can't be restored from a backup
+    this.set("pomodoro", null);
+  },
+
+  // Delete all saved data (used by Settings → Delete all data)
+  clearAll() {
+    try {
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith(this.PREFIX) || ["todos", "habits", "links", "notes", "weatherCity", "theme"].includes(key))
+        .forEach((key) => localStorage.removeItem(key));
+      localStorage.setItem(this.PREFIX + "version", String(this.VERSION)); // don't re-run the version 1 migration
+    } catch {}
+    this.cache = {};
+  },
+
+  // Roughly how much browser storage the app uses
+  usageBytes() {
+    try {
+      return Object.keys(localStorage)
+        .filter((key) => key.startsWith(this.PREFIX))
+        .reduce((sum, key) => sum + (key.length + (localStorage.getItem(key) || "").length) * 2, 0);
+    } catch {
+      return 0;
+    }
+  },
+
   // Everything in one object, used for the backup file
   exportAll() {
     return {
@@ -222,15 +320,7 @@ const Store = {
       version: this.VERSION,
       exportedAt: new Date().toISOString(),
       data: {
-        tasks: this.get("tasks"),
-        habits: this.get("habits"),
-        events: this.get("events"),
-        notes: this.get("notes"),
-        subjects: this.get("subjects"),
-        studySessions: this.get("studySessions"),
-        goals: this.get("goals"),
-        expenses: this.get("expenses"),
-        links: this.get("links"),
+        ...Object.fromEntries(this.BACKUP_LISTS.map((name) => [name, this.get(name)])),
         quickNote: this.get("quickNote"),
         settings: this.get("settings"),
       },

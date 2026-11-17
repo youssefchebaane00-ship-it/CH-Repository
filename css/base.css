@@ -76,6 +76,26 @@
   --sky-strength: 0.35;
 }
 
+/* ===== Accent colors (Settings → Appearance) =====
+   <html data-accent="…"> swaps only the accent values. Cyan is the default above. */
+:root[data-accent="violet"]  { --accent: #a78bfa; --accent-2: #c084fc; --accent-soft: rgba(167, 139, 250, 0.14); --on-accent: #1e1035; }
+:root[data-accent="emerald"] { --accent: #34d399; --accent-2: #2dd4bf; --accent-soft: rgba(52, 211, 153, 0.13); --on-accent: #022c22; }
+:root[data-accent="amber"]   { --accent: #fbbf24; --accent-2: #fb923c; --accent-soft: rgba(251, 191, 36, 0.13); --on-accent: #2a1a02; }
+:root[data-accent="rose"]    { --accent: #fb7185; --accent-2: #f472b6; --accent-soft: rgba(251, 113, 133, 0.14); --on-accent: #3b0712; }
+:root[data-accent="blue"]    { --accent: #60a5fa; --accent-2: #818cf8; --accent-soft: rgba(96, 165, 250, 0.14); --on-accent: #0b1a33; }
+
+/* Darker versions in light mode so text stays readable on white */
+:root[data-theme="light"][data-accent="violet"]  { --accent: #7c3aed; --accent-2: #9333ea; --accent-soft: rgba(124, 58, 237, 0.1); --on-accent: #fff; }
+:root[data-theme="light"][data-accent="emerald"] { --accent: #059669; --accent-2: #0d9488; --accent-soft: rgba(5, 150, 105, 0.1); --on-accent: #fff; }
+:root[data-theme="light"][data-accent="amber"]   { --accent: #b45309; --accent-2: #c2410c; --accent-soft: rgba(180, 83, 9, 0.1); --on-accent: #fff; }
+:root[data-theme="light"][data-accent="rose"]    { --accent: #e11d48; --accent-2: #db2777; --accent-soft: rgba(225, 29, 72, 0.1); --on-accent: #fff; }
+:root[data-theme="light"][data-accent="blue"]    { --accent: #2563eb; --accent-2: #4f46e5; --accent-soft: rgba(37, 99, 235, 0.1); --on-accent: #fff; }
+
+/* The hover glow follows the accent color */
+:root[data-accent] {
+  --glow: 0 10px 30px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
 /* ===== Reset ===== */
 *,
 *::before,

@@ -10,6 +10,7 @@ const Shell = {
   init() {
     this.renderNav();
     this.renderProfile();
+    document.documentElement.dataset.accent = Store.get("settings").accent; // also set early in index.html
     this.setupSidebar();
     this.setupTheme();
     this.setupSearch();
@@ -30,7 +31,6 @@ const Shell = {
       <a class="nav-link" href="#/${item.id}" data-nav="${item.id}" title="${UI.escape(item.label)}">
         ${icon(item.icon)}
         <span class="nav-label">${UI.escape(item.label)}</span>
-        ${item.phase ? `<span class="nav-badge">Soon</span>` : ""}
       </a>`).join("");
   },
 
@@ -108,6 +108,12 @@ const Shell = {
     } else {
       apply();
     }
+  },
+
+  setAccent(accent) {
+    const value = accent in Views.ACCENTS ? accent : "cyan";
+    Store.setSetting("accent", value);
+    document.documentElement.dataset.accent = value; // css/base.css picks the colors
   },
 
   updateThemeButton() {
@@ -379,14 +385,50 @@ const Shell = {
   },
 
   // ===== Keyboard shortcuts =====
+  showShortcuts() {
+    const rows = [
+      ["Ctrl + K  or  /", "Search everything"],
+      ["Q", "Open quick add"],
+      ["T  E  N  S  X  G  H  L", "In quick add: task, event, note, study session, expense, goal, habit, link"],
+      ["↑  ↓  Enter", "Move through search results and open one"],
+      ["Esc", "Close a menu, dialog or search"],
+      ["Tab", "Move between buttons and fields"],
+      ["?", "Show this list"],
+    ];
+    UI.openModal(`
+      <h2>${icon("keyboard")} Keyboard shortcuts</h2>
+      <dl class="shortcut-list">
+        ${rows.map(([keys, what]) => `<dt>${keys.split("  ").map((k) => `<kbd>${UI.escape(k)}</kbd>`).join(" ")}</dt><dd>${UI.escape(what)}</dd>`).join("")}
+      </dl>
+      <div class="modal-actions"><button class="btn btn-primary" type="button" data-close>Got it</button></div>`,
+      (modal, close) => {
+        modal.querySelector("[data-close]").addEventListener("click", close);
+        modal.querySelector("[data-close]").focus();
+        return close;
+      });
+  },
+
   setupKeyboard() {
     document.addEventListener("keydown", (event) => {
-      const typing = event.target.closest("input, textarea, select, [contenteditable]");
+      // Are we typing in a field? (The key can also come from the page itself, which isn't an element.)
+      const typing = event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable]");
 
       // Ctrl+K (or ⌘K) or "/" focuses the search box
       if ((event.key === "k" && (event.ctrlKey || event.metaKey)) || (event.key === "/" && !typing)) {
         event.preventDefault();
         document.getElementById("search-input").focus();
+      }
+
+      const modalOpen = document.querySelector(".modal-backdrop");
+      // "?" shows the list of shortcuts
+      if (event.key === "?" && !typing && !modalOpen) {
+        event.preventDefault();
+        this.showShortcuts();
+      }
+      // "q" opens the quick add menu
+      if (event.key === "q" && !typing && !modalOpen && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        document.getElementById("quick-add-button").click();
       }
 
       if (event.key === "Escape" && !document.querySelector(".modal-backdrop")) {

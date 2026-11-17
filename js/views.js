@@ -1,7 +1,6 @@
 // =========================================================
 // VIEWS: one function per page. Each draws its page into `container`.
-// NAV lists the pages in the sidebar. Sections with a `phase` are
-// planned for a later phase and show an honest "coming soon" page.
+// NAV lists the pages in the sidebar, in order.
 // =========================================================
 
 const NAV = [
@@ -13,37 +12,40 @@ const NAV = [
   { id: "notes", label: "Notes", icon: "notebook-pen" },
   { id: "goals", label: "Goals", icon: "target" },
   { id: "expenses", label: "Expenses", icon: "wallet" },
-  { id: "analytics", label: "Analytics", icon: "chart-column", phase: 5,
-    plans: ["Tasks completed over time", "Study hours and habit completion charts", "Daily, weekly and monthly views"] },
+  { id: "analytics", label: "Analytics", icon: "chart-column" },
   { id: "settings", label: "Settings", icon: "settings" },
 ];
 
 const Views = {
+  // Dashboard widgets: the name shown in Settings, grid width, and how to draw it
+  DASHBOARD_WIDGETS: [
+    { id: "tasks", label: "Today's tasks", span: 7, render: (el) => Tasks.renderWidget(el) },
+    { id: "habits", label: "Habits", span: 5, render: (el) => Habits.renderWidget(el) },
+    { id: "study", label: "Study", span: 4, render: (el) => Study.renderWidget(el) },
+    { id: "upcoming", label: "Upcoming events", span: 4, render: (el) => Calendar.renderWidget(el) },
+    { id: "weather", label: "Weather", span: 4, render: (el) => Weather.render(el) },
+    { id: "week", label: "This week (productivity)", span: 4, render: (el) => Analytics.renderWeekWidget(el) },
+    { id: "note", label: "Quick note", span: 4, render: (el) => QuickNote.render(el) },
+    { id: "links", label: "Favorite links", span: 4, render: (el) => Links.render(el) },
+  ],
+
   dashboard(container) {
+    const shown = Store.get("settings").dashboardWidgets;
+    const widgets = this.DASHBOARD_WIDGETS.filter((w) => shown[w.id] !== false);
+
     container.innerHTML = `
       <div class="dashboard">
         <section class="card welcome" data-welcome></section>
-        <section class="stats-grid" data-stats></section>
+        ${shown.stats !== false ? `<section class="stats-grid" data-stats></section>` : ""}
         <div class="widget-grid">
-          <section class="card span-7" data-tasks></section>
-          <section class="card span-5" data-habits></section>
-          <section class="card span-4" data-study></section>
-          <section class="card span-4" data-upcoming></section>
-          <section class="card span-4" data-weather></section>
-          <section class="card span-5" data-note></section>
-          <section class="card span-7" data-links></section>
+          ${widgets.map((w) => `<section class="card span-${w.span}" data-widget="${w.id}" data-${w.id}></section>`).join("")}
         </div>
+        ${widgets.length ? "" : `<section class="card">${UI.emptyState("layout-dashboard", "All widgets are hidden", "Choose which widgets to show in Settings → Dashboard.")}</section>`}
       </div>`;
 
     Welcome.render(container.querySelector("[data-welcome]"));
-    Stats.renderCards(container.querySelector("[data-stats]"));
-    Tasks.renderWidget(container.querySelector("[data-tasks]"));
-    Habits.renderWidget(container.querySelector("[data-habits]"));
-    Study.renderWidget(container.querySelector("[data-study]"));
-    Calendar.renderWidget(container.querySelector("[data-upcoming]"));
-    Weather.render(container.querySelector("[data-weather]"));
-    QuickNote.render(container.querySelector("[data-note]"));
-    Links.render(container.querySelector("[data-links]"));
+    if (shown.stats !== false) Stats.renderCards(container.querySelector("[data-stats]"));
+    widgets.forEach((w) => w.render(container.querySelector(`[data-widget="${w.id}"]`)));
   },
 
   tasks(container) {
@@ -70,6 +72,10 @@ const Views = {
     Expenses.renderPage(container);
   },
 
+  analytics(container) {
+    Analytics.renderPage(container);
+  },
+
   notes(container) {
     Notes.renderPage(container);
   },
@@ -88,6 +94,26 @@ const Views = {
               <button type="button" data-value="dark">${icon("moon")}Dark</button>
               <button type="button" data-value="light">${icon("sun")}Light</button>
             </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-text"><strong>Accent color</strong><span>Buttons, highlights and charts.</span></div>
+            <div class="accent-choices" role="radiogroup" aria-label="Accent color" data-accent-choice>
+              ${Object.entries(this.ACCENTS).map(([id, a]) => `
+                <button type="button" role="radio" class="accent-swatch" data-value="${id}" style="--swatch:${a.color}"
+                        aria-checked="${settings.accent === id}" aria-label="${a.label}" title="${a.label}"></button>`).join("")}
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header"><h3 class="card-title"><span class="card-icon sky">${icon("layout-dashboard")}</span>Dashboard</h3></div>
+          <p class="muted small">Choose what appears on your dashboard. The welcome banner is always shown.</p>
+          <div class="widget-toggles" data-widget-toggles>
+            ${[{ id: "stats", label: "Statistics cards" }, ...this.DASHBOARD_WIDGETS].map((w) => `
+              <label class="toggle-row">
+                <input type="checkbox" data-widget="${w.id}" ${settings.dashboardWidgets[w.id] !== false ? "checked" : ""}>
+                <span>${UI.escape(w.label)}</span>
+              </label>`).join("")}
           </div>
         </section>
 
@@ -162,13 +188,33 @@ const Views = {
         </section>
 
         <section class="card">
-          <div class="card-header"><h3 class="card-title"><span class="card-icon emerald">${icon("download")}</span>Your data</h3></div>
+          <div class="card-header">
+            <h3 class="card-title"><span class="card-icon emerald">${icon("database")}</span>Your data</h3>
+            <span class="badge" title="Approximate space used in this browser">${(Store.usageBytes() / 1024).toFixed(1)} KB used</span>
+          </div>
           <div class="setting-row">
             <div class="setting-text">
               <strong>Download a backup</strong>
-              <span>Everything is stored only in this browser. Save a backup file now and then (importing it back comes in Phase 5).</span>
+              <span>Everything is stored only in this browser. Save a backup file now and then.</span>
             </div>
             <button class="btn btn-secondary" type="button" data-export>${icon("download")}Export JSON</button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <strong>Restore from a backup</strong>
+              <span>Replaces all current data with a backup file. The file is checked first, and your current data is downloaded as a safety copy before anything changes.</span>
+            </div>
+            <label class="btn btn-secondary file-button">
+              ${icon("upload")}Import JSON
+              <input type="file" accept="application/json,.json" data-import class="sr-only">
+            </label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <strong>Delete all data</strong>
+              <span>Removes everything from this browser. This can't be undone.</span>
+            </div>
+            <button class="btn btn-secondary danger-text" type="button" data-delete-all>${icon("trash-2")}Delete all…</button>
           </div>
         </section>
       </div>`;
@@ -252,27 +298,88 @@ const Views = {
       }
     });
 
+    // Accent color
+    const accentGroup = container.querySelector("[data-accent-choice]");
+    accentGroup.addEventListener("click", (event) => {
+      const swatch = event.target.closest("[data-value]");
+      if (!swatch) return;
+      Shell.setAccent(swatch.dataset.value);
+      accentGroup.querySelectorAll("[data-value]").forEach((b) => b.setAttribute("aria-checked", String(b === swatch)));
+    });
+
+    // Dashboard widgets
+    container.querySelector("[data-widget-toggles]").addEventListener("change", (event) => {
+      const box = event.target.closest("[data-widget]");
+      if (!box) return;
+      const widgets = { ...Store.get("settings").dashboardWidgets, [box.dataset.widget]: box.checked };
+      Store.setSetting("dashboardWidgets", widgets);
+      UI.toast(`${box.checked ? "Shown" : "Hidden"} on the dashboard`, { type: "info", duration: 2000 });
+    });
+
+    // Data: export, import, delete
     container.querySelector("[data-export]").addEventListener("click", () => {
-      // Turn the data into a file and "click" a hidden download link
-      const blob = new Blob([JSON.stringify(Store.exportAll(), null, 2)], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `personal-dashboard-backup-${UI.dateKey()}.json`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(link.href), 1000); // free the memory
+      this.downloadBackup();
       UI.toast("Backup downloaded");
+    });
+
+    container.querySelector("[data-import]").addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      event.target.value = ""; // so choosing the same file again still works
+      if (!file) return;
+      if (file.size > 20 * 1024 * 1024) {
+        UI.toast("That file is too large to be a backup.", { type: "error" });
+        return;
+      }
+      const result = Store.validateBackup(await file.text());
+      if (!result.ok) {
+        UI.toast(`Import cancelled: ${result.error} Nothing was changed.`, { type: "error", duration: 7000 });
+        return;
+      }
+      const when = result.exportedAt ? ` from ${new Date(result.exportedAt).toLocaleString()}` : "";
+      const ok = await UI.confirm({
+        title: "Replace all data with this backup?",
+        message: `The backup${when} contains ${result.summary.join(", ")}. All your current data will be replaced. A safety copy of your current data will be downloaded first.`,
+        confirmLabel: "Replace my data",
+      });
+      if (!ok) return;
+      this.downloadBackup("before-import");
+      Store.importAll(result.data);
+      UI.toast("Backup restored. Reloading…", { type: "info" });
+      setTimeout(() => location.reload(), 900); // start fresh with the restored data
+    });
+
+    container.querySelector("[data-delete-all]").addEventListener("click", async () => {
+      const values = await UI.form({
+        title: "Delete all data?",
+        submitLabel: "Delete everything",
+        fields: [{ name: "confirm", label: "This removes all tasks, habits, notes, study sessions, goals, expenses and settings from this browser. Type DELETE to confirm.",
+          placeholder: "DELETE", validate: (v) => (v === "DELETE" ? "" : "Type DELETE in capital letters.") }],
+      });
+      if (!values) return;
+      Store.clearAll();
+      UI.toast("All data deleted. Reloading…", { type: "info" });
+      setTimeout(() => location.reload(), 900);
     });
   },
 
-  // Honest placeholder for sections planned in a later phase
-  comingSoon(container, item) {
-    container.innerHTML = `
-      <section class="card coming-soon">
-        <div class="card-icon">${icon(item.icon)}</div>
-        <h2>${UI.escape(item.label)} is coming in Phase ${item.phase}</h2>
-        <p class="muted">This section isn't built yet. Here's what it will include:</p>
-        <ul>${item.plans.map((p) => `<li>${icon("check")}${UI.escape(p)}</li>`).join("")}</ul>
-      </section>`;
+  ACCENTS: {
+    cyan: { label: "Cyan", color: "#22d3ee" },
+    violet: { label: "Violet", color: "#a78bfa" },
+    emerald: { label: "Emerald", color: "#34d399" },
+    amber: { label: "Amber", color: "#fbbf24" },
+    rose: { label: "Rose", color: "#fb7185" },
+    blue: { label: "Blue", color: "#60a5fa" },
+  },
+
+  // Save all data to a .json file: we build the file in memory and
+  // "click" a hidden download link.
+  downloadBackup(suffix = "") {
+    const blob = new Blob([JSON.stringify(Store.exportAll(), null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `personal-dashboard-backup-${UI.dateKey()}${suffix ? "-" + suffix : ""}.json`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000); // free the memory
   },
 
   pageHeader(title, subtitle) {

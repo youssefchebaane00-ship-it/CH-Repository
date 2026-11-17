@@ -1,0 +1,320 @@
+/* =========================================================
+   PHASE 5: analytics charts, weekly widget, forecast, settings extras
+   ========================================================= */
+
+/* ===== Charts ===== */
+.bar-chart.dyn {
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 6px;
+}
+
+/* Many bars (14 days, 12 weeks/months): smaller labels */
+.bar-chart.dense .bar-value {
+  font-size: 0.62rem;
+}
+
+.bar-chart.dense .bar-label {
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .bar-chart.dense .bar-value { display: none; }  /* not enough room; hover/tap a bar for its value */
+  .bar-chart.dense { gap: 3px; }
+}
+
+.chart-empty {
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+  padding: 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.chart-empty:empty {
+  display: none;
+}
+
+.chart-note {
+  margin-top: 10px;
+  font-size: 0.76rem;
+  color: var(--text-faint);
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.chart-legend > span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.analytics-range {
+  margin: -10px 0 16px;
+}
+
+[data-money] .hbar-list {
+  margin-top: 16px;
+}
+
+.goal-mini {
+  margin: 14px 0 0;
+}
+
+/* Habit completion list */
+.habit-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.habit-streaks {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.habit-streaks span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.habit-streaks .icon {
+  width: 13px;
+  height: 13px;
+  color: var(--amber);
+}
+
+/* ===== Dashboard: "This week" widget ===== */
+.week-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.week-row-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.week-row-top strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.week-strip,
+.week-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.week-cell {
+  height: 34px;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 6px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.week-cell > span {
+  display: block;
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  transition: height 0.5s ease;
+}
+
+.week-cell.today {
+  outline: 1.5px solid var(--border-strong);
+  outline-offset: 1px;
+}
+
+.week-cell.future {
+  background: transparent;
+  border: 1px dashed var(--border);
+}
+
+.week-days span {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+
+.week-days .today {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ===== Weather forecast ===== */
+.forecast {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.forecast-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+.forecast-day > .icon {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+}
+
+.forecast-name {
+  font-weight: 600;
+}
+
+.forecast-temp {
+  white-space: nowrap;
+}
+
+.forecast-temp strong {
+  color: var(--text);
+}
+
+.forecast-rain {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--sky);
+  font-size: 0.68rem;
+}
+
+.forecast-rain .icon {
+  width: 11px;
+  height: 11px;
+}
+
+/* ===== Settings extras ===== */
+.accent-choices {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.accent-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--swatch);
+  border: 3px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--border-strong);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.accent-swatch:hover {
+  transform: scale(1.1);
+}
+
+.accent-swatch[aria-checked="true"] {
+  box-shadow: 0 0 0 2px var(--swatch);
+}
+
+.widget-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.toggle-row:hover {
+  background: var(--surface-3);
+}
+
+.file-button {
+  cursor: pointer;
+}
+
+/* Keep the red "Delete all" button on the right like the other buttons */
+.setting-row .btn.danger-text {
+  margin-right: 0;
+}
+
+/* Line up the Pomodoro inputs even when a label wraps onto two lines */
+.pomo-settings {
+  align-items: end;
+}
+
+.file-button:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ===== Keyboard shortcuts dialog ===== */
+.modal h2 .icon {
+  vertical-align: -3px;
+  color: var(--accent);
+}
+
+.shortcut-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 16px;
+  margin-top: 16px;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.shortcut-list dd {
+  color: var(--text-muted);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  background: var(--surface-2);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .shortcut-list { grid-template-columns: 1fr; gap: 4px; }
+  .shortcut-list dd { margin-bottom: 8px; }
+}

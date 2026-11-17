@@ -59,7 +59,7 @@ const Weather = {
   async load(city, body, { force = false } = {}) {
     const fresh = this.cache && Date.now() - this.cache.time < this.CACHE_MINUTES * 60000;
     if (!force && fresh && this.cache.city.toLowerCase() === city.toLowerCase()) {
-      this.show(body, this.cache.place, this.cache.current);
+      this.show(body, this.cache.place, this.cache.current, this.cache.daily);
       return;
     }
 
@@ -89,22 +89,49 @@ const Weather = {
       const weatherResponse = await fetch(
         "https://api.open-meteo.com/v1/forecast" +
         `?latitude=${place.latitude}&longitude=${place.longitude}` +
-        "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,is_day");
+        "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,is_day" +
+        "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=6&timezone=auto");
       if (!weatherResponse.ok) throw new Error("forecast failed");
       const data = await weatherResponse.json();
       if (isOutdated()) return;
       if (!data.current) throw new Error("no current weather");
 
-      this.cache = { city, place, current: data.current, time: Date.now() };
+      this.cache = { city, place, current: data.current, daily: data.daily, time: Date.now() };
       Store.setSetting("weatherCity", city); // remember the last city that worked
-      this.show(body, place, data.current);
+      this.show(body, place, data.current, data.daily);
     } catch {
       if (isOutdated()) return;
       this.message(body, "cloud", "Couldn't load the weather right now. Please try again in a moment.");
     }
   },
 
-  show(body, place, now) {
+  // The next 5 days (skips today, which is shown above). Only real forecast data.
+  forecastHtml(daily) {
+    if (!daily || !Array.isArray(daily.time)) return "";
+    const days = daily.time.map((date, i) => ({
+      date,
+      code: daily.weather_code?.[i],
+      max: daily.temperature_2m_max?.[i],
+      min: daily.temperature_2m_min?.[i],
+      rain: daily.precipitation_probability_max?.[i],
+    })).filter((d) => d.date > UI.dateKey() && Number.isFinite(d.max) && Number.isFinite(d.min)).slice(0, 5);
+    if (!days.length) return "";
+    return `
+      <div class="forecast" aria-label="5-day forecast">
+        ${days.map((d) => {
+          const [iconName, label] = this.describe(d.code, true);
+          return `
+            <div class="forecast-day" title="${UI.escape(UI.formatDay(d.date, { weekday: "long", day: "numeric", month: "long" }))}: ${UI.escape(label)}">
+              <span class="forecast-name">${UI.escape(UI.formatDay(d.date, { weekday: "short" }))}</span>
+              ${icon(iconName)}
+              <span class="forecast-temp"><strong>${Math.round(d.max)}°</strong> ${Math.round(d.min)}°</span>
+              ${Number.isFinite(d.rain) && d.rain >= 20 ? `<span class="forecast-rain">${icon("umbrella")}${Math.round(d.rain)}%</span>` : ""}
+            </div>`;
+        }).join("")}
+      </div>`;
+  },
+
+  show(body, place, now, daily) {
     const [iconName, label] = this.describe(now.weather_code, now.is_day !== 0);
     const where = place.name + (place.country ? `, ${place.country}` : "");
     body.innerHTML = `
@@ -119,7 +146,8 @@ const Weather = {
         <div class="weather-detail">Feels like<strong>${Math.round(now.apparent_temperature)}°C</strong></div>
         <div class="weather-detail">Humidity<strong>${Math.round(now.relative_humidity_2m)}%</strong></div>
         <div class="weather-detail">Wind<strong>${Math.round(now.wind_speed_10m)} km/h</strong></div>
-      </div>`;
+      </div>
+      ${this.forecastHtml(daily)}`;
     UI.replayAnimation(body, "fade-in");
   },
 };

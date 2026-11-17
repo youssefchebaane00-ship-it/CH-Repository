@@ -11,6 +11,7 @@
       const settings = JSON.parse(localStorage.getItem("pd.settings") || "null");
       const oldTheme = JSON.parse(localStorage.getItem("theme") || "null"); // from version 1
       document.documentElement.dataset.theme = (settings && settings.theme) || oldTheme || "dark";
+      document.documentElement.dataset.accent = (settings && settings.accent) || "cyan";
     } catch {}
   </script>
 
@@ -26,6 +27,7 @@
   <link rel="stylesheet" href="css/pages.css">
   <link rel="stylesheet" href="css/study.css">
   <link rel="stylesheet" href="css/personal.css">
+  <link rel="stylesheet" href="css/analytics.css">
   <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
@@ -109,6 +111,8 @@
   <script src="js/widgets/study.js"></script>
   <script src="js/widgets/goals.js"></script>
   <script src="js/widgets/expenses.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/widgets/analytics.js"></script>
   <script src="js/notifications.js"></script>
   <script src="js/views.js"></script>
   <script src="js/router.js"></script>

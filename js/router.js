@@ -40,8 +40,7 @@ const Router = {
     // Draw the page. Replacing the content also removes the old page's
     // elements and their event listeners, so nothing piles up in memory.
     view.innerHTML = "";
-    if (item.phase) Views.comingSoon(view, item);
-    else Views[id](view);
+    Views[id](view);
 
     if (animate) UI.replayAnimation(view, "view-enter");
     document.getElementById("page-title").textContent = item.label;
