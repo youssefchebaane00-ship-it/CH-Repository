@@ -6,6 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Personal Dashboard</title>
 
+  <!-- Apply your saved light/dark choice BEFORE the page is drawn,
+       so it doesn't flash the wrong colors for a split second -->
+  <script>
+    try {
+      const savedTheme = JSON.parse(localStorage.getItem("theme"));
+      if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+    } catch {}
+  </script>
+
   <!-- Connect our stylesheet (the "paint and furniture") -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -15,6 +24,7 @@
 
     <!-- ===== Widget 1: Greeting + Clock + Daily quote ===== -->
     <section class="card greeting-card">
+      <button id="theme-toggle" class="theme-toggle" type="button">🌙</button>
       <h1 id="greeting">Hello!</h1>
       <p id="clock" class="clock">--:--:--</p>
       <p id="date" class="date"></p>

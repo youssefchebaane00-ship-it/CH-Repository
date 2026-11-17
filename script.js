@@ -42,6 +42,45 @@ function makeDeleteButton(label, onClick) {
 
 
 // =========================================
+// THEME BUTTON: switch between light and dark
+// =========================================
+// The chosen theme is stored as an attribute on the <html> tag:
+// <html data-theme="dark"> or <html data-theme="light">.
+// style.css picks the colors based on that attribute.
+
+const themeButton = document.getElementById("theme-toggle");
+const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+// Which theme is showing right now?
+function currentTheme() {
+  const chosen = document.documentElement.dataset.theme;
+  if (chosen) return chosen;                  // you picked one with the button
+  return systemDark.matches ? "dark" : "light"; // otherwise, follow Windows
+}
+
+// Update the button's icon: show the mode you'd switch TO
+function updateThemeButton() {
+  const isDark = currentTheme() === "dark";
+  themeButton.textContent = isDark ? "☀️" : "🌙";
+  const label = isDark ? "Switch to light mode" : "Switch to dark mode";
+  themeButton.title = label;
+  themeButton.setAttribute("aria-label", label);
+}
+
+themeButton.addEventListener("click", () => {
+  const newTheme = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = newTheme;
+  save("theme", newTheme); // remember it for next time
+  updateThemeButton();
+});
+
+// If Windows changes mode while the page is open, keep the icon correct
+systemDark.addEventListener("change", updateThemeButton);
+
+updateThemeButton();
+
+
+// =========================================
 // WIDGET 1: Greeting + Clock
 // =========================================
 

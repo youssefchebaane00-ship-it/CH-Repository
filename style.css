@@ -18,19 +18,38 @@
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* Dark mode: kicks in automatically when Windows (or your phone) is set to dark.
+/* Dark mode colors. They're used in two situations:
+   1. You clicked the theme button to choose dark  → <html data-theme="dark">
+   2. You haven't chosen, and Windows is set to dark → the @media block below
    We only swap the color values; every other rule stays the same. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0b1416;
+  --card: #15222a;
+  --input: #0f1a20;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #2dd4bf;      /* a brighter teal, easier to see on dark */
+  --accent-soft: #123b3a;
+  --on-accent: #042f2e;   /* dark text on the bright teal button */
+  --border: #263640;
+  --danger: #f87171;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Same colors again, used automatically when Windows is dark,
+   unless you clicked the button to choose light (data-theme="light"). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --background: #0b1416;
     --card: #15222a;
     --input: #0f1a20;
     --text: #e2e8f0;
     --muted: #94a3b8;
-    --accent: #2dd4bf;      /* a brighter teal, easier to see on dark */
+    --accent: #2dd4bf;
     --accent-soft: #123b3a;
-    --on-accent: #042f2e;   /* dark text on the bright teal button */
+    --on-accent: #042f2e;
     --border: #263640;
     --danger: #f87171;
     --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
@@ -181,6 +200,21 @@ button:hover {
 .greeting-card {
   grid-column: 1 / -1; /* stretch across the full width */
   text-align: center;
+  position: relative;  /* lets the theme button be placed in this card's corner */
+}
+
+/* The round 🌙 / ☀️ button in the top-right corner */
+.theme-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  font-size: 1.3rem;
+  line-height: 1;
 }
 
 .greeting-card h1 {
