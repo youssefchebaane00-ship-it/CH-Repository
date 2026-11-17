@@ -121,6 +121,12 @@ button:hover {
   color: var(--muted);
 }
 
+/* ...but never cross out the streak badge: it's good news, not a finished task! */
+.item.done .streak {
+  text-decoration: none;
+  color: var(--accent);
+}
+
 /* The small grey ✕ button */
 .delete-button {
   background: transparent;
