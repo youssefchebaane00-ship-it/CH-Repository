@@ -1,116 +1,101 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <!-- Basic page settings -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Personal Dashboard</title>
+  <title>PersonalDashboard</title>
 
-  <!-- Apply your saved light/dark choice BEFORE the page is drawn,
-       so it doesn't flash the wrong colors for a split second -->
+  <!-- Apply the saved theme BEFORE the page is drawn (avoids a white flash). Dark is the default. -->
   <script>
     try {
-      const savedTheme = JSON.parse(localStorage.getItem("theme"));
-      if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+      const settings = JSON.parse(localStorage.getItem("pd.settings") || "null");
+      const oldTheme = JSON.parse(localStorage.getItem("theme") || "null"); // from version 1
+      document.documentElement.dataset.theme = (settings && settings.theme) || oldTheme || "dark";
     } catch {}
   </script>
 
-  <!-- Connect our stylesheet (the "paint and furniture") -->
-  <link rel="stylesheet" href="style.css">
+  <!-- Inter font (falls back to the system font when offline) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/widgets.css">
+  <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
 
-  <main class="dashboard">
+  <div class="app" id="app">
 
-    <!-- ===== Widget 1: Greeting + Clock + Daily quote ===== -->
-    <section class="card greeting-card">
-      <button id="theme-toggle" class="theme-toggle" type="button">🌙</button>
-      <h1 id="greeting">Hello!</h1>
-      <p id="clock" class="clock">--:--:--</p>
-      <p id="date" class="date"></p>
-
-      <blockquote class="quote">
-        <p id="quote-text"></p>
-        <footer id="quote-author"></footer>
-      </blockquote>
-    </section>
-
-    <!-- ===== Widget 2: Weather ===== -->
-    <section class="card">
-      <h2>🌦️ Weather</h2>
-
-      <form id="weather-form" class="row-form">
-        <input id="weather-input" type="text" placeholder="Enter your city" autocomplete="off">
-        <button type="submit">Show</button>
-      </form>
-
-      <!-- script.js fills this in -->
-      <div id="weather-result" class="weather-result">
-        <p class="empty-message">Type a city to see the weather.</p>
-      </div>
-    </section>
-
-    <!-- ===== Widget 3: To-do list ===== -->
-    <section class="card">
-      <h2>✅ To-do</h2>
-
-      <form id="todo-form" class="row-form">
-        <input id="todo-input" type="text" placeholder="What do you need to do?" autocomplete="off">
-        <button type="submit">Add</button>
-      </form>
-
-      <ul id="todo-list" class="item-list"></ul>
-      <p id="todo-empty" class="empty-message">No tasks yet. Add one above!</p>
-    </section>
-
-    <!-- ===== Widget 4: Habit tracker ===== -->
-    <section class="card">
-      <h2>🔥 Habits</h2>
-
-      <!-- Today's progress: filled in by script.js -->
-      <div id="habit-progress" class="progress">
-        <div class="progress-info">
-          <span>Today</span>
-          <span id="habit-progress-text">0 / 0</span>
-        </div>
-        <div class="progress-track">
-          <div id="habit-progress-bar" class="progress-bar"></div>
-        </div>
+    <!-- ===== Sidebar (filled in by js/shell.js) ===== -->
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+      <div class="sidebar-brand">
+        <div class="logo" aria-hidden="true">PD</div>
+        <span class="brand-name">PersonalDashboard</span>
       </div>
 
-      <form id="habit-form" class="row-form">
-        <input id="habit-input" type="text" placeholder="e.g. Drink water, Read 10 pages" autocomplete="off">
-        <button type="submit">Add</button>
-      </form>
+      <nav class="sidebar-nav" id="sidebar-nav"></nav>
 
-      <ul id="habit-list" class="item-list"></ul>
-      <p id="habit-empty" class="empty-message">No habits yet. Add one to start a streak!</p>
-    </section>
+      <div class="sidebar-footer">
+        <a class="profile" id="profile" href="#/settings"></a>
+        <button class="btn-icon collapse-button" id="collapse-button" type="button"></button>
+      </div>
+    </aside>
 
-    <!-- ===== Widget 5: Quick notes ===== -->
-    <section class="card">
-      <h2>📝 Notes</h2>
-      <textarea id="notes" class="notes" placeholder="Write anything here… it saves automatically."></textarea>
-      <p id="notes-status" class="small-text"></p>
-    </section>
+    <!-- Dark overlay behind the sidebar on phones -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-    <!-- ===== Widget 6: Favorite links ===== -->
-    <section class="card">
-      <h2>🔗 Favorite links</h2>
+    <!-- ===== Main area ===== -->
+    <div class="main">
 
-      <form id="link-form" class="link-form">
-        <input id="link-name" type="text" placeholder="Name (e.g. YouTube)" autocomplete="off">
-        <input id="link-url" type="text" placeholder="Address (e.g. youtube.com)" autocomplete="off">
-        <button type="submit">Add</button>
-      </form>
+      <header class="topbar">
+        <button class="btn-icon menu-button" id="menu-button" type="button" aria-label="Open menu"></button>
 
-      <div id="link-list" class="link-list"></div>
-      <p id="link-empty" class="empty-message">No links yet.</p>
-    </section>
+        <div class="topbar-title">
+          <h1 id="page-title">Dashboard</h1>
+          <p id="topbar-date" class="topbar-date"></p>
+        </div>
 
-  </main>
+        <div class="search" id="search">
+          <span class="search-icon" id="search-icon"></span>
+          <input id="search-input" type="search" placeholder="Search…  (Ctrl+K)" autocomplete="off"
+                 aria-label="Search tasks, habits, notes and links">
+          <div class="dropdown search-results" id="search-results" hidden></div>
+        </div>
 
-  <!-- Connect our JavaScript (the "electricity"), loaded last so the page exists first -->
-  <script src="script.js"></script>
+        <div class="topbar-actions">
+          <div class="quick-add">
+            <button class="btn btn-primary" id="quick-add-button" type="button" aria-haspopup="menu" aria-expanded="false"></button>
+            <div class="dropdown quick-add-menu" id="quick-add-menu" role="menu" hidden></div>
+          </div>
+          <button class="btn-icon" id="theme-button" type="button"></button>
+        </div>
+      </header>
+
+      <!-- Each page is drawn in here by js/router.js -->
+      <main class="view" id="view" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <!-- Toast notifications appear here -->
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <!-- Scripts: order matters, each file can use the ones loaded before it -->
+  <script src="js/icons.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/widgets/welcome.js"></script>
+  <script src="js/widgets/stats.js"></script>
+  <script src="js/widgets/tasks.js"></script>
+  <script src="js/widgets/habits.js"></script>
+  <script src="js/widgets/notes.js"></script>
+  <script src="js/widgets/links.js"></script>
+  <script src="js/widgets/weather.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/shell.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

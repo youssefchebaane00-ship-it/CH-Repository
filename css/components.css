@@ -1,0 +1,463 @@
+/* =========================================================
+   COMPONENTS: reusable building blocks used on every page.
+   ========================================================= */
+
+/* ===== Card ===== */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  min-width: 0;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.card.hoverable:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--glow);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.98rem;
+  font-weight: 600;
+  margin-right: auto;
+  min-width: 0;
+}
+
+/* Small colored square behind a card's icon */
+.card-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.card-icon .icon {
+  width: 17px;
+  height: 17px;
+}
+
+.card-icon.violet  { background: color-mix(in srgb, var(--violet) 14%, transparent);  color: var(--violet); }
+.card-icon.amber   { background: color-mix(in srgb, var(--amber) 14%, transparent);   color: var(--amber); }
+.card-icon.rose    { background: color-mix(in srgb, var(--rose) 14%, transparent);    color: var(--rose); }
+.card-icon.emerald { background: color-mix(in srgb, var(--emerald) 14%, transparent); color: var(--emerald); }
+.card-icon.sky     { background: color-mix(in srgb, var(--sky) 14%, transparent);     color: var(--sky); }
+
+.card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.card-link:hover {
+  text-decoration: underline;
+}
+
+.card-link .icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* ===== Badge ===== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.badge.accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ===== Inline "add" form: input + button ===== */
+.add-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* ===== List rows (tasks, habits) ===== */
+.item-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  margin: 0 -8px;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s;
+}
+
+.item + .item {
+  border-top: 1px solid var(--border);
+}
+
+.item:hover {
+  background: var(--surface-2);
+}
+
+.item:hover + .item {
+  border-top-color: transparent;
+}
+
+.item-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+}
+
+/* The words. The "crossed out" line is a thin background stripe that grows
+   from 0% to 100% wide, so it draws itself from left to right. */
+.item-label {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 55% / 0% 1.5px;
+  transition: background-size 0.35s ease, color 0.35s ease;
+}
+
+.item.done .item-label {
+  background-size: 100% 1.5px;
+  color: var(--text-faint);
+}
+
+/* Action buttons appear on hover (always visible on touch screens) */
+.item-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.item:hover .item-actions,
+.item:focus-within .item-actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .item-actions { opacity: 1; }
+}
+
+/* ===== Progress bar ===== */
+.progress-track {
+  height: 8px;
+  background: var(--surface-3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.5s ease;
+}
+
+/* When something is 100% done, the bar shines */
+.progress-bar.complete {
+  background: linear-gradient(90deg, var(--accent), #a5f3fc, var(--accent-2), var(--accent));
+  background-size: 200% 100%;
+  animation: shine 2.2s linear infinite;
+}
+
+/* ===== Empty state ===== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 26px 12px;
+  color: var(--text-muted);
+}
+
+.empty-state .empty-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+
+.empty-state .empty-icon .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.empty-state strong {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.93rem;
+}
+
+.empty-state p {
+  font-size: 0.85rem;
+  max-width: 320px;
+}
+
+/* ===== Dropdown menus (quick add, search results) ===== */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  min-width: 220px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  animation: pop-in 0.15s ease;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  text-align: left;
+  color: var(--text);
+}
+
+.menu-item:hover,
+.menu-item:focus-visible,
+.menu-item.active {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.menu-item .icon {
+  color: var(--text-muted);
+}
+
+.menu-item small {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+.search-results {
+  left: 0;
+  right: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.search-group {
+  padding: 8px 10px 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.search-empty {
+  padding: 14px 10px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.result-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+mark {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 3px;
+}
+
+/* ===== Toasts ===== */
+.toasts {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(380px, calc(100vw - 40px));
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--emerald);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.9rem;
+  animation: toast-in 0.25s ease;
+}
+
+.toast.error { border-left-color: var(--danger); }
+.toast.info  { border-left-color: var(--accent); }
+
+.toast .toast-icon { color: var(--emerald); display: flex; }
+.toast.error .toast-icon { color: var(--danger); }
+.toast.info .toast-icon { color: var(--accent); }
+
+.toast-message {
+  flex: 1;
+}
+
+.toast-action {
+  font-weight: 600;
+  color: var(--accent);
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.toast-action:hover {
+  background: var(--accent-soft);
+}
+
+.toast.leaving {
+  animation: toast-out 0.2s ease forwards;
+}
+
+/* ===== Modal dialog ===== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(2, 6, 23, 0.6);
+  backdrop-filter: blur(3px);
+  animation: fade-in 0.15s ease;
+}
+
+.modal {
+  width: min(460px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 22px;
+  animation: pop-in 0.2s ease;
+}
+
+.modal h2 {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+
+.modal-message {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.modal-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+/* ===== Page header (Tasks, Habits, Notes pages) ===== */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.page-header h2 {
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.page-header p {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+/* ===== Segmented control (e.g. Dark | Light) ===== */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+/* Small loading spinner */
+.spinner {
+  animation: spin 0.9s linear infinite;
+}

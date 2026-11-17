@@ -1,0 +1,550 @@
+/* =========================================================
+   WIDGETS & PAGES: styles for specific widgets and pages.
+   ========================================================= */
+
+/* ===== Dashboard grid ===== */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 12 columns: each widget chooses how many it spans */
+.widget-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.span-7 { grid-column: span 7; }
+.span-5 { grid-column: span 5; }
+.span-4 { grid-column: span 4; }
+
+@media (max-width: 1180px) {
+  .span-7, .span-5, .span-4 { grid-column: span 6; }
+}
+
+@media (max-width: 760px) {
+  .span-7, .span-5, .span-4 { grid-column: span 12; }
+}
+
+/* ===== Welcome banner ===== */
+.welcome {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 26px;
+}
+
+/* Time-of-day sky: a colored glow that changes with the hour.
+   js/widgets/welcome.js sets <html data-period="morning|afternoon|evening|night">. */
+.welcome-sky {
+  position: absolute;
+  inset: 0;
+  opacity: var(--sky-strength);
+  pointer-events: none;
+}
+
+[data-period="morning"] .welcome-sky {
+  background: radial-gradient(120% 140% at 100% 0%, #fdba74 0%, #f9a8d4 35%, transparent 70%);
+}
+[data-period="afternoon"] .welcome-sky {
+  background: radial-gradient(120% 140% at 100% 0%, #22d3ee 0%, #60a5fa 40%, transparent 70%);
+}
+[data-period="evening"] .welcome-sky {
+  background: radial-gradient(120% 140% at 100% 0%, #fb923c 0%, #f472b6 35%, #a78bfa 55%, transparent 75%);
+}
+[data-period="night"] .welcome-sky {
+  background: radial-gradient(120% 140% at 100% 0%, #6366f1 0%, #1e3a8a 40%, transparent 70%);
+}
+
+.welcome-main,
+.welcome-side {
+  position: relative;  /* sit above the sky */
+}
+
+.welcome-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.welcome h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 4px 0 10px;
+}
+
+.quote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 620px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.quote .icon {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  color: var(--accent);
+}
+
+.quote-author {
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.welcome-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.clock {
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;  /* digits don't "jump" */
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.daily-progress {
+  width: 100%;
+}
+
+.daily-progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.daily-progress-info strong {
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .welcome {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 20px;
+  }
+
+  .welcome-side {
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .clock {
+    font-size: 2.1rem;
+  }
+}
+
+/* ===== Stat cards ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 1100px) {
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { gap: 12px; }
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+
+.stat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-sub {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  margin-top: -4px;
+}
+
+/* ===== Habits ===== */
+.habit-progress {
+  margin-bottom: 14px;
+}
+
+.habit-progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.habit-progress-info .complete-text {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--amber) 13%, transparent);
+  color: var(--amber);
+}
+
+.streak[data-level="0"] {
+  background: var(--surface-3);
+  color: var(--text-faint);
+}
+
+.flame {
+  display: inline-flex;
+}
+
+.flame .icon {
+  width: 14px;
+  height: 14px;
+  transition: width 0.3s, height 0.3s;
+}
+
+/* The flame grows with the streak: level 1 = 3+ days, level 2 = 7+ days */
+.streak[data-level="1"] .flame .icon { width: 16px; height: 16px; }
+.streak[data-level="2"] .flame .icon { width: 18px; height: 18px; }
+.streak[data-level="2"] .flame { animation: flicker 1.6s ease-in-out infinite; }
+
+/* Last 7 days as little squares (Habits page) */
+.week-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.week-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--surface-3);
+}
+
+.week-dot.on {
+  background: var(--accent);
+}
+
+.week-dot.today {
+  outline: 1.5px solid var(--border-strong);
+  outline-offset: 1px;
+}
+
+@media (max-width: 520px) {
+  .week-dots { display: none; }
+}
+
+/* ===== Notes ===== */
+.note-area {
+  min-height: 170px;
+}
+
+.page-note .note-area {
+  min-height: 55vh;
+  font-size: 1rem;
+}
+
+.note-status {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  margin-top: 8px;
+  min-height: 1.2em;
+}
+
+/* ===== Links ===== */
+.link-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.link-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 0.88rem;
+  font-weight: 500;
+  min-width: 0;
+  transition: border-color 0.2s, background-color 0.2s, transform 0.15s;
+}
+
+.link-tile:hover {
+  border-color: var(--accent);
+  background: var(--surface-3);
+}
+
+.link-tile a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.link-tile a::after {
+  content: "";
+  position: absolute;
+  inset: 0;   /* the whole tile is clickable */
+}
+
+.link-initial {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.link-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-tile .btn-icon {
+  position: relative;
+  z-index: 1;     /* above the clickable area */
+  margin: -6px -8px -6px 0;
+  opacity: 0;
+}
+
+.link-tile:hover .btn-icon,
+.link-tile:focus-within .btn-icon {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .link-tile .btn-icon { opacity: 1; }
+}
+
+.link-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 520px) {
+  .link-form { grid-template-columns: 1fr; }
+}
+
+/* ===== Weather ===== */
+.weather-body {
+  min-height: 130px;
+}
+
+.weather-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.weather-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.weather-icon .icon {
+  width: 30px;
+  height: 30px;
+}
+
+.weather-temp {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.weather-place {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.weather-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.weather-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.weather-detail strong {
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.weather-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 4px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ===== Settings page ===== */
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 760px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  flex-wrap: wrap;
+}
+
+.setting-row + .setting-row {
+  border-top: 1px solid var(--border);
+}
+
+.setting-text {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.setting-text strong {
+  display: block;
+  font-size: 0.93rem;
+  font-weight: 600;
+}
+
+.setting-text span {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.setting-control {
+  display: flex;
+  gap: 8px;
+  flex: 0 1 320px;
+}
+
+/* ===== "Coming soon" pages ===== */
+.coming-soon {
+  max-width: 640px;
+  margin: 40px auto;
+  text-align: center;
+  padding: 40px 28px;
+}
+
+.coming-soon .card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  margin: 0 auto 16px;
+}
+
+.coming-soon .card-icon .icon {
+  width: 26px;
+  height: 26px;
+}
+
+.coming-soon h2 {
+  font-size: 1.35rem;
+  margin-bottom: 6px;
+}
+
+.coming-soon ul {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.coming-soon li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coming-soon li .icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}

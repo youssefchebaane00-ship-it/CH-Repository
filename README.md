@@ -1,38 +1,55 @@
-# Personal Dashboard
+# PersonalDashboard
 
-A simple personal start page that runs entirely in your web browser. No installation, no account, no server.
-
-## Features
-
-- 👋 **Greeting and clock**: says good morning, afternoon or evening, with the live time and date
-- 💬 **Daily quote**: a new motivational quote each day
-- 🌦️ **Weather**: current weather for your city (remembered for next time)
-- ✅ **To-do list**: add, tick off and delete tasks
-- 🔥 **Habit tracker**: tick habits daily and build streaks
-- 📝 **Quick notes**: a notepad that saves automatically
-- 🔗 **Favorite links**: one-click shortcuts to the sites you use most
-- 🌙 **Dark mode**: switches automatically with your system setting
+A personal productivity app that runs entirely in your web browser. No installation, no account, no server.
 
 ## How to use it
 
-1. Download or copy this folder.
-2. Double-click `index.html`. It opens in your browser.
+Double-click `index.html`. It opens in your browser.
 
-That's it. Tip: set it as your browser's home page so it greets you every time.
+Tip: bookmark it or set it as your browser's home page.
 
-## How it's built
+## Features (Phase 1)
 
-| File | Role |
-|---|---|
-| `index.html` | The structure: which widgets are on the page |
-| `style.css` | The look: colors, layout, light and dark mode |
-| `script.js` | The behavior: the clock, saving tasks, loading the weather, and so on |
+- **App layout:** collapsible sidebar, top bar, and pages that switch without reloading (the browser's back/forward buttons work)
+- **Dashboard:** greeting, live clock, daily quote, today's progress and 4 statistics calculated from your real data
+- **Tasks:** add, tick off (the line draws itself), delete with **Undo**
+- **Habits:** daily check-ins, streaks with a growing 🔥, today's progress bar, last-7-days view, confetti when everything's done
+- **Quick note:** saves automatically while you type
+- **Weather:** current weather for any city (default: Tunis), via [Open-Meteo](https://open-meteo.com/) (free, no API key)
+- **Favorite links**
+- **Global search** (`Ctrl+K` or `/`) across tasks, habits, notes and links
+- **Quick add** menu for tasks, habits, links and notes
+- **Dark theme by default**, with a light theme. Your choice is remembered.
+- **Settings:** theme, your name, default weather city, **backup export (JSON)**
+- Works on desktop, tablet and phone. Respects the system "reduce motion" setting.
 
-- Plain **HTML, CSS and JavaScript**. No frameworks and no build step.
-- Your tasks, habits, notes and links are saved in your browser's **localStorage**. They stay on your computer and are never uploaded anywhere. They're saved only in the browser you use, so a different browser or computer starts empty.
-- Weather data comes from [Open-Meteo](https://open-meteo.com/), a free service that needs no account or API key.
+Calendar, Study Tracker, Goals, Expenses and Analytics are marked **"Soon"** in the sidebar and come in later phases.
 
-## Customizing
+## Your data
 
-- **Colors:** edit the values at the top of `style.css`. There's one set for light mode and one for dark mode.
-- **Quotes:** add your own to the `quotes` list in `script.js`.
+Everything is saved in your browser's `localStorage`, only on this computer and in this browser. Use **Settings → Export JSON** now and then to keep a backup.
+
+## Project structure
+
+```
+index.html            the app frame (sidebar, top bar, page area)
+css/
+  base.css            colors (dark + light themes), fonts, buttons, form fields
+  layout.css          sidebar, top bar, responsive layout
+  components.css      cards, lists, badges, toasts, dialogs, menus
+  widgets.css         styles for specific widgets and pages
+  animations.css      all animations + reduced-motion support
+js/
+  icons.js            Lucide icons (copied in, so they work offline)
+  storage.js          saving/loading data + upgrading data from older versions
+  ui.js               shared helpers: toasts, dialogs, animations, confetti
+  widgets/            one file per widget (tasks, habits, notes, links, weather, …)
+  views.js            one function per page + the sidebar menu list
+  router.js           switches pages using the address (#/tasks, #/habits, …)
+  shell.js            sidebar, theme toggle, search, quick add, keyboard shortcuts
+  app.js              starts everything (loaded last)
+```
+
+Built with plain HTML, CSS and JavaScript: no frameworks, no build step. The scripts are normal `<script>` files (not JavaScript modules) on purpose, because browsers block modules when you open a file by double-clicking it.
+
+Icons: [Lucide](https://lucide.dev) (ISC License).
