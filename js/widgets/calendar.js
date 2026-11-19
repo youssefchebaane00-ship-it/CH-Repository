@@ -279,13 +279,21 @@ const Calendar = {
         `${UI.relativeDay(key) === UI.formatDay(key) ? "" : UI.relativeDay(key) + " · "}${UI.formatDay(key, { weekday: "long", day: "numeric", month: "long" })}`;
       const events = this.eventsOn(key);
       const tasks = this.tasksOn(key);
+      const blocks = typeof Planner === "undefined" ? [] : Planner.blocksOn(key);
 
       agenda.innerHTML = `
         ${events.length ? `<ul class="agenda-list">${events.map((e) => this.agendaEventHtml(e)).join("")}</ul>` : ""}
+        ${blocks.length ? `
+          <p class="agenda-section">Planned time</p>
+          <ul class="agenda-list">${blocks.map((b) => `
+            <li class="agenda-item"><a class="agenda-main" href="#/planner" data-planner-day="${key}">
+              <span class="agenda-time">${b.start}–${b.end}</span><span class="agenda-bar accent"></span>
+              <span class="agenda-text"><strong>${UI.escape(Planner.blockTitle(b))}</strong><span>Time block</span></span></a></li>`).join("")}</ul>` : ""}
         ${tasks.length ? `
           <p class="agenda-section">Tasks due</p>
           <ul class="item-list" data-agenda-tasks></ul>` : ""}
-        ${!events.length && !tasks.length ? UI.emptyState("calendar", "Nothing on this day", "Click + to add an event, or give a task this due date.") : ""}`;
+        ${!events.length && !tasks.length && !blocks.length ? UI.emptyState("calendar", "Nothing on this day", "Click + to add an event, or give a task this due date.") : ""}`;
+      agenda.querySelectorAll("[data-planner-day]").forEach((a) => a.addEventListener("click", () => { Planner.state.date = a.dataset.plannerDay; }));
 
       const taskList = agenda.querySelector("[data-agenda-tasks]");
       // Ticking a task only redraws the grid; editing/deleting redraws the agenda too

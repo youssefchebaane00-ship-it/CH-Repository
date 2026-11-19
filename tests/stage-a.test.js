@@ -29,9 +29,9 @@
     // ================= MODULE REGISTRY =================
     const ids = Modules.list.map((m) => m.id);
     ok("all modules registered", ["dashboard", "tasks", "calendar", "habits", "study", "notes", "goals", "expenses", "links", "weather", "analytics", "backups", "settings"].every((id) => ids.includes(id)), ids.join(","));
-    ok("sidebar built from registry (10 pages, in order)", $$("[data-nav]").map((a) => a.dataset.nav).join(",") === "dashboard,tasks,calendar,habits,study,notes,goals,expenses,analytics,settings");
-    ok("8 quick actions from modules", Modules.quickActions().map((a) => a.key).join("") === "TENSXGHL");
-    ok("8 dashboard widgets from modules", Modules.widgets().length === 8 && $$(".widget-grid [data-widget]").length === 8);
+    ok("sidebar built from registry (12 pages, in order)", $$("[data-nav]").map((a) => a.dataset.nav).join(",") === "dashboard,tasks,projects,calendar,planner,habits,study,notes,goals,expenses,analytics,settings");
+    ok("10 quick actions from modules", Modules.quickActions().map((a) => a.key).join("") === "TENSBXPGHL");
+    ok("11 dashboard widgets from modules", Modules.widgets().length === 11 && $$(".widget-grid [data-widget]").length === 11);
     ok("collections defined by modules", ["tasks", "events", "habits", "subjects", "studySessions", "notes", "quickNote", "goals", "expenses", "links"].every((n) => Store.backupNames().includes(n)));
     ok("timers are not backed up", !Store.backupNames().includes("activeSession") && !Store.backupNames().includes("pomodoro"));
     ok("duplicate module rejected", throws(() => Modules.register({ id: "tasks" })));
@@ -152,7 +152,7 @@
     $$("#search-results [data-command]")[0].click(); await wait(250);
     ok("snapshot command opens Settings at the snapshots", location.hash === "#/settings" && !!$('[data-id="snapshots"].highlighted'));
     key("?"); await wait(50);
-    ok("shortcuts list uses registered actions", /T E N S X G H L/.test($$(".shortcut-list kbd").map((k) => k.textContent).join(" ")));
+    ok("shortcuts list uses registered actions", /T E N S B X P G H L/.test($$(".shortcut-list kbd").map((k) => k.textContent).join(" ")));
     key("Escape"); await wait(50);
   } catch (e) {
     out.push("CRASH  " + e.message + "\n" + e.stack);

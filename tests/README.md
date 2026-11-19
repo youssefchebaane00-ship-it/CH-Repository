@@ -29,7 +29,8 @@ The last line shows the total. Any failure is listed with its name, so you know 
 | `phase3.test.js` | Study Tracker and Pomodoro (with a faked clock) |
 | `phase4.test.js` | Goals, expenses, favorite links, quick actions |
 | `phase5.test.js` | Analytics, forecast, settings, import validation, shortcuts |
-| `stage-a.test.js` | Module registry, snapshots, backup reminders, command palette |
+| `stage-a.test.js` | Module registry, snapshots, backup reminders, command palette (runs on the real clock because it uses IndexedDB) |
+| `stage-b.test.js` | Projects & Kanban, dependencies, planner suggestions & conflicts, insights |
 
 ## Good habit
 

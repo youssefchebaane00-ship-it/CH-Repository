@@ -13,6 +13,8 @@ Tip: bookmark it or set it as your browser's home page.
 - **App layout:** collapsible sidebar, top bar, and pages that switch without reloading (the browser's back/forward buttons work)
 - **Dashboard:** greeting, live clock, daily quote, today's progress, 5 statistics from your real data, and widgets you can show or hide: today's tasks, habits, study, upcoming events, weather, this week's productivity, quick note, links
 - **Tasks:** title, description, priority (High/Medium/Low), due date, category, tags. Filters (All, Today, Upcoming, Overdue, Completed), category filter, sorting, overdue warnings, edit dialog, delete with **Undo**
+- **Projects:** multiple projects with a Kanban board (To do / Doing / Done, drag and drop or arrow buttons), milestones, deadlines, project notes, resource links and progress. Tasks can wait for another task ("blocked by"), and loops are prevented.
+- **Planner:** time blocking on a day view with hours, a week overview, conflict detection, moving blocks around, estimated task durations, and **Suggest a plan**: rule-based (overdue → due date → priority) and only added when you accept it. Planning hours are set in Settings.
 - **Calendar:** month and week views, day agenda, events typed as Event, Deadline, Exam or Personal, with optional times. Tasks with due dates appear on their day. Double-click a day to add an event.
 - **Habits:** daily or weekly (“3× per week”) habits, current and longest streaks, completion rates, weekly and monthly check-in counts, 6-month heatmaps. History is never erased.
 - **Notes:** multiple notes with title, category, tags, pinning, search, timestamps and autosave. The dashboard quick note can be saved as a note.
@@ -22,6 +24,7 @@ Tip: bookmark it or set it as your browser's home page.
 - **Goals:** daily, weekly, monthly and long-term goals with category, target date and a progress slider. 100% completes a goal (with confetti). Shows active and recently completed goals, and completed goals can be reopened.
 - **Expenses:** amount (TND with 3 decimals by default, changeable in Settings), category, date and description. Month by month: total vs last month, optional monthly budget with warnings, daily average, spending by category, 6-month chart and transactions with edit, delete and Undo.
 - **Analytics:** daily (14 days), weekly (12 weeks) and monthly (12 months) views of tasks completed, study time (overall and per subject), habit completion rates and streaks, goals completed and spending, each compared with the previous period. Everything is calculated from your own data.
+- **Insights:** written observations (study trends, best study day, task completion, overdue work, unplanned deadlines, habit consistency, streaks at risk, goals at risk, spending pace, budget projection, time of day). Each appears only with enough data and shows the numbers behind it.
 - **Notifications** (bell): overdue tasks, tasks and events today, tomorrow's events, habits left today
 - **Weather:** current weather and a 5-day forecast for any city (default: Tunis), via [Open-Meteo](https://open-meteo.com/) (free, no API key)
 - **Favorite links:** categories, editing, and each site's own icon (loaded directly from the site, never through a third-party service)
@@ -53,6 +56,7 @@ css/
   study.css           Study Tracker, Pomodoro and timer pill styles
   personal.css        goals, expenses and favorite links styles
   analytics.css       charts, weekly widget, forecast, settings extras
+  stage-b.css         projects & Kanban, planner, insights
   animations.css      all animations + reduced-motion support
 js/
   icons.js            Lucide icons (copied in, so they work offline)
@@ -63,6 +67,7 @@ js/
   backups.js          automatic daily snapshots (IndexedDB) and backup reminders
   widgets/            one file per feature (tasks, calendar, habits, notes, links, weather, …)
   charts.js           bar charts made of plain HTML (no chart library)
+  insights.js         rule-based observations from your data
   notifications.js    the bell: reminders built from your tasks, events, habits, goals and budget
   views.js            the built-in Dashboard and Settings pages
   router.js           switches pages using the address (#/tasks, #/habits, …)

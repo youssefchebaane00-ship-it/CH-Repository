@@ -86,12 +86,41 @@ const Tasks = {
   },
 
   setDone(id, done) {
-    const task = this.update(id, { done, completedAt: done ? new Date().toISOString() : null });
+    // The Kanban column follows: done ↔ "Done" column
+    const current = this.all().find((t) => t.id === id);
+    const status = done ? "done" : current && current.status === "done" ? "todo" : current?.status || "todo";
+    const task = this.update(id, { done, status, completedAt: done ? new Date().toISOString() : null });
     if (done && this.all().every((t) => t.done)) {
       UI.confetti();
       UI.toast("All tasks done. Amazing! 🎉");
     }
     return task;
+  },
+
+  // ---------- Dependencies ("blocked by") ----------
+  // Unfinished tasks this task is waiting for (missing or finished ones don't block)
+  blockers(task) {
+    return task.blockedBy.map((id) => this.all().find((t) => t.id === id)).filter((t) => t && !t.done);
+  },
+
+  isBlocked(task) {
+    return !task.done && this.blockers(task).length > 0;
+  },
+
+  // Would "task waits for blocker" create a loop (A waits for B, B waits for A)?
+  // We follow blocker's own dependencies; if we ever reach task, it's a loop.
+  createsCycle(taskId, blockerId) {
+    const seen = new Set();
+    const stack = [blockerId];
+    while (stack.length) {
+      const id = stack.pop();
+      if (id === taskId) return true;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const t = this.all().find((x) => x.id === id);
+      if (t) stack.push(...t.blockedBy);
+    }
+    return false;
   },
 
   // Delete with an "Undo" toast. The task goes back where it was.
@@ -115,8 +144,16 @@ const Tasks = {
   // ---------- Edit dialog (also used to create) ----------
   // Returns the saved task, "deleted", or null if cancelled.
   async openEditor(task = null, defaults = {}, { quiet = false } = {}) {
-    const t = task || { title: "", description: "", priority: "medium", category: "other", dueDate: "", tags: [], ...defaults };
+    const t = task || { title: "", description: "", priority: "medium", category: "other", dueDate: "", tags: [], projectId: null, estimateMinutes: null, blockedBy: [], ...defaults };
     const options = (obj, getLabel) => Object.entries(obj).map(([value, v]) => ({ value, label: getLabel(v) }));
+
+    // Projects you can put the task in, and tasks it can wait for (never itself, never a loop)
+    const projectOptions = [{ value: "", label: "No project" },
+      ...(typeof Projects === "undefined" ? [] : Projects.all().filter((p) => p.status !== "archived" || p.id === t.projectId)
+        .map((p) => ({ value: p.id, label: p.name })))];
+    const blockerOptions = [{ value: "", label: "Nothing (can start any time)" },
+      ...this.all().filter((x) => !x.done && x.id !== task?.id && !(task && this.createsCycle(task.id, x.id)))
+        .map((x) => ({ value: x.id, label: x.title.slice(0, 60) }))];
 
     const values = await UI.form({
       title: task ? "Edit task" : "New task",
@@ -131,6 +168,11 @@ const Tasks = {
         { name: "dueDate", label: "Due date (optional)", type: "date", half: true, value: t.dueDate || "",
           validate: (v) => (v && !UI.isDateKey(v) ? "Please pick a valid date." : "") },
         { name: "tags", label: "Tags (comma separated)", half: true, value: (t.tags || []).join(", "), placeholder: "exam, math" },
+        { name: "projectId", label: "Project", type: "select", half: true, value: t.projectId || "", options: projectOptions },
+        { name: "estimateMinutes", label: "Estimated time (minutes, optional)", type: "number", half: true, min: 5, max: 1440,
+          value: t.estimateMinutes ? String(t.estimateMinutes) : "",
+          validate: (v) => (!v || (/^\d+$/.test(v) && Number(v) >= 5 && Number(v) <= 1440) ? "" : "Enter 5 to 1440 minutes, or leave empty.") },
+        { name: "blockedBy", label: "Waits for (must be finished first)", type: "select", value: t.blockedBy?.[0] || "", options: blockerOptions },
       ],
     });
 
@@ -147,6 +189,10 @@ const Tasks = {
       category: values.category in this.CATEGORIES ? values.category : "other",
       dueDate: values.dueDate || null,
       tags: UI.parseTags(values.tags),
+      projectId: values.projectId && typeof Projects !== "undefined" && Projects.get(values.projectId) ? values.projectId : null,
+      estimateMinutes: values.estimateMinutes ? Number(values.estimateMinutes) : null,
+      // Double-check the loop rule (the list could be stale if something changed meanwhile)
+      blockedBy: values.blockedBy && !(task && this.createsCycle(task.id, values.blockedBy)) ? [values.blockedBy] : [],
     };
     if (task) {
       const saved = this.update(task.id, data);
@@ -169,6 +215,16 @@ const Tasks = {
       const today = this.isDueToday(task) && !task.done;
       const label = overdue ? `Overdue · ${UI.relativeDay(task.dueDate)}` : UI.relativeDay(task.dueDate);
       parts.push(`<span class="badge${overdue ? " overdue" : today ? " accent" : ""}">${icon(overdue ? "triangle-alert" : "calendar")}${UI.escape(label)}</span>`);
+    }
+    const project = typeof Projects !== "undefined" && task.projectId ? Projects.get(task.projectId) : null;
+    if (project) {
+      parts.push(`<span class="badge project-badge" style="--subject:${UI.escape(project.color)}"><span class="subject-dot"></span>${UI.escape(project.name)}</span>`);
+    }
+    if (this.isBlocked(task)) {
+      parts.push(`<span class="badge blocked" title="Finish this first">${icon("lock")}Waits for: ${UI.escape(this.blockers(task)[0].title.slice(0, 40))}</span>`);
+    }
+    if (task.estimateMinutes) {
+      parts.push(`<span class="badge">${icon("hourglass")}${UI.escape(UI.formatDuration(task.estimateMinutes * 60))}</span>`);
     }
     if (task.category && task.category !== "other") {
       parts.push(`<span class="badge">${icon("folder")}${UI.escape(this.CATEGORIES[task.category] || task.category)}</span>`);
@@ -434,8 +490,12 @@ Modules.register({
       normalize: (t) => ({
         description: "", priority: "medium", dueDate: null, category: "other",
         done: false, createdAt: null, completedAt: null,
+        projectId: null, estimateMinutes: null,
         ...t,
         tags: Array.isArray(t.tags) ? t.tags : [],
+        blockedBy: Array.isArray(t.blockedBy) ? t.blockedBy.filter((id) => typeof id === "string") : [],
+        // Kanban column: always "done" for finished tasks; otherwise "todo" or "doing"
+        status: t.done ? "done" : t.status === "doing" ? "doing" : "todo",
       }),
     },
   },

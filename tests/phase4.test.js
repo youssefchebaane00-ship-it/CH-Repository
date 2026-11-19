@@ -175,7 +175,7 @@
 
     // ================= QUICK ADD + SEARCH =================
     $("#quick-add-button").click();
-    ok("quick add has 8 actions", $$("#quick-add-menu [data-action]").length === 8);
+    ok("quick add has 10 actions", $$("#quick-add-menu [data-action]").length === 10);
     $('[data-action="expense"]').click(); await wait(50);
     await modalSubmit({ amount: "4.5", category: "food", date: today, description: "Coffee" });
     ok("quick add expense", Expenses.all().some((e) => e.description === "Coffee" && e.amount === 4.5));

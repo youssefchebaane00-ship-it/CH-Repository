@@ -47,6 +47,7 @@ const Analytics = {
       </div>
       <p class="muted small analytics-range" data-range></p>
       <section class="stats-grid" data-summary></section>
+      <section class="card insights-card" data-insights></section>
       <div class="study-grid">
         <section class="card" data-tasks></section>
         <section class="card" data-study></section>
@@ -177,6 +178,7 @@ const Analytics = {
       draw();
     });
     draw();
+    Insights.renderCard(container.querySelector("[data-insights]")); // observations don't depend on the period
   },
 
   // ---------- Dashboard widget: this week (Mon–Sun) at a glance ----------

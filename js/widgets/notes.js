@@ -134,6 +134,11 @@ const Notes = {
           <select class="input compact" data-field="category" aria-label="Category">
             ${Object.entries(this.CATEGORIES).map(([v, l]) => `<option value="${v}"${v === note.category ? " selected" : ""}>${l}</option>`).join("")}
           </select>
+          <select class="input compact" data-field="projectId" aria-label="Project" title="Link this note to a project">
+            <option value="">No project</option>
+            ${Projects.all().filter((p) => p.status !== "archived" || p.id === note.projectId)
+              .map((p) => `<option value="${UI.escape(p.id)}"${p.id === note.projectId ? " selected" : ""}>${UI.escape(p.name)}</option>`).join("")}
+          </select>
           <div class="search-field tags-field" title="Tags, separated by commas">
             ${icon("tag")}
             <input class="input compact" data-field="tags" value="${UI.escape(note.tags.join(", "))}" placeholder="tags, comma, separated" aria-label="Tags">
@@ -158,6 +163,7 @@ const Notes = {
           content: editor.querySelector('[data-field="content"]').value,
           category: editor.querySelector('[data-field="category"]').value,
           tags: UI.parseTags(editor.querySelector('[data-field="tags"]').value),
+          projectId: editor.querySelector('[data-field="projectId"]').value || null,
         };
         this.update(note.id, values);
         saved.textContent = "Saved ✓";
@@ -314,7 +320,7 @@ Modules.register({
       default: [],
       backup: true,
       normalize: (n) => ({
-        title: "", content: "", category: "personal", pinned: false, createdAt: null, updatedAt: null,
+        title: "", content: "", category: "personal", pinned: false, createdAt: null, updatedAt: null, projectId: null,
         ...n,
         tags: Array.isArray(n.tags) ? n.tags : [],
       }),

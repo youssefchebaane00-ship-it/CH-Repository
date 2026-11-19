@@ -29,6 +29,8 @@ const Store = {
       monthlyBudget: 0,       // 0 = no budget
       accent: "cyan",
       lastExportAt: null,     // when a backup file was last downloaded
+      plannerDayStart: "08:00", // the planner suggests time blocks between these hours
+      plannerDayEnd: "20:00",
       // Which dashboard widgets are shown (Settings → Dashboard). Missing = shown.
       dashboardWidgets: {},
     },
@@ -248,9 +250,17 @@ const Store = {
       monthlyBudget: num(s.monthlyBudget, 0, 10000000, 0),
       accent: typeof s.accent === "string" && /^[a-z]{3,10}$/.test(s.accent) ? s.accent : d.accent,
       lastExportAt: typeof s.lastExportAt === "string" ? s.lastExportAt : null,
+      plannerDayStart: /^([01]\d|2[0-3]):[0-5]\d$/.test(s.plannerDayStart) ? s.plannerDayStart : d.plannerDayStart,
+      plannerDayEnd: /^([01]\d|2[0-3]):[0-5]\d$/.test(s.plannerDayEnd) && s.plannerDayEnd > (s.plannerDayStart || "") ? s.plannerDayEnd : d.plannerDayEnd,
       // only true/false values for widget names
       dashboardWidgets: Object.fromEntries(Object.entries(widgets).filter(([k, v]) => /^[a-z]{2,20}$/.test(k) && typeof v === "boolean")),
     };
+
+    // The planning day must end after it starts
+    if (data.settings.plannerDayEnd <= data.settings.plannerDayStart) {
+      data.settings.plannerDayStart = d.plannerDayStart;
+      data.settings.plannerDayEnd = d.plannerDayEnd;
+    }
 
     return { ok: true, data, summary, exportedAt: file.exportedAt };
   },

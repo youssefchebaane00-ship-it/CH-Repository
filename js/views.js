@@ -124,6 +124,18 @@ const Views = {
         </section>
 
         <section class="card">
+          <div class="card-header"><h3 class="card-title"><span class="card-icon">${icon("calendar-clock")}</span>Planner</h3></div>
+          <form class="setting-row" data-planner-form>
+            <div class="setting-text"><strong>Planning hours</strong><span>“Suggest a plan” only places tasks between these times.</span></div>
+            <div class="setting-control">
+              <input class="input" type="time" name="start" value="${UI.escape(settings.plannerDayStart)}" aria-label="Planning starts at">
+              <input class="input" type="time" name="end" value="${UI.escape(settings.plannerDayEnd)}" aria-label="Planning ends at">
+              <button class="btn btn-secondary" type="submit">Save</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
           <div class="card-header"><h3 class="card-title"><span class="card-icon amber">${icon("wallet")}</span>Money</h3></div>
           <form class="setting-row" data-currency-form>
             <div class="setting-text"><strong>Currency</strong><span>Used to display expenses. Amounts are not converted.</span></div>
@@ -246,6 +258,18 @@ const Views = {
         .forEach(([key, value]) => { pomoForm.elements[key].value = value; });
     });
     container.querySelector("[data-test-sound]").addEventListener("click", () => Sound.chime());
+
+    // Planner hours
+    container.querySelector("[data-planner-form]").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const { start, end } = event.target.elements;
+      if (!Planner.isTime(start.value) || !Planner.isTime(end.value) || end.value <= start.value) {
+        UI.toast("Choose a start time before the end time.", { type: "error" });
+        return;
+      }
+      Store.set("settings", { ...Store.get("settings"), plannerDayStart: start.value, plannerDayEnd: end.value });
+      UI.toast(`Planning hours: ${start.value}–${end.value}`);
+    });
 
     // Money settings
     const budgetText = container.querySelector("[data-budget-text]");

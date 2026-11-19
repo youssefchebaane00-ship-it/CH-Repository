@@ -179,7 +179,7 @@
 
     // ---------- Quick add ----------
     $("#quick-add-button").click();
-    ok("quick add has 8 actions", $$("#quick-add-menu [data-action]").length === 8);
+    ok("quick add has 10 actions", $$("#quick-add-menu [data-action]").length === 10);
     $('[data-action="event"]').click(); await wait(50);
     await modalSubmit({ title: "Dentist", type: "personal", date: UI.addDays(today, 1), startTime: "10:00", endTime: "11:00" });
     ok("quick add event", Calendar.all().some((e) => e.title === "Dentist"));
