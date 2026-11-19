@@ -507,3 +507,49 @@ const Habits = {
     draw();
   },
 };
+
+// ---------------------------------------------------------
+// Register the Habits module (see js/modules.js)
+// ---------------------------------------------------------
+Modules.register({
+  id: "habits",
+  order: 40,
+  nav: { label: "Habits", icon: "flame" },
+  page: (container) => Habits.renderPage(container),
+
+  collections: {
+    // { id, name, frequency: "daily"|"weekly", weeklyTarget, doneDays: ["2026-11-17", ...], createdAt }
+    habits: {
+      default: [],
+      backup: true,
+      normalize: (h) => ({
+        frequency: "daily", weeklyTarget: 3, createdAt: null,
+        ...h,
+        doneDays: Array.isArray(h.doneDays) ? h.doneDays.filter((d) => typeof d === "string") : [],
+      }),
+    },
+  },
+
+  search(q, has) {
+    return { label: "Habits", items: Habits.all().filter((h) => has(h.name)).slice(0, 6).map((h) => ({ text: h.name, icon: "flame", page: "habits", id: h.id })) };
+  },
+
+  notifications() {
+    const left = Habits.all().filter((h) => !Habits.doneForToday(h));
+    if (!left.length) return [];
+    return [{
+      tone: "amber", icon: "flame", text: `${left.length} habit${left.length === 1 ? "" : "s"} left today`,
+      sub: left.slice(0, 3).map((h) => h.name).join(", "), page: "habits",
+    }];
+  },
+
+  quickAdd: [{
+    id: "habit", label: "New habit", icon: "flame", key: "H", order: 70,
+    async run() {
+      const created = await Habits.openEditor(null, { quiet: true });
+      return { created, page: "habits", label: "Habit", onDashboard: true };
+    },
+  }],
+
+  widgets: [{ id: "habits", label: "Habits", span: 5, order: 20, render: (el) => Habits.renderWidget(el) }],
+});

@@ -352,3 +352,63 @@ const Expenses = {
     drawAll();
   },
 };
+
+// ---------------------------------------------------------
+// Register the Expenses module (see js/modules.js)
+// ---------------------------------------------------------
+Modules.register({
+  id: "expenses",
+  order: 80,
+  nav: { label: "Expenses", icon: "wallet" },
+  page: (container) => Expenses.renderPage(container),
+
+  collections: {
+    // { id, amount, category, date, description, createdAt }
+    expenses: {
+      default: [],
+      backup: true,
+      normalize: (e) => ({
+        category: "other", description: "", createdAt: null,
+        ...e,
+        amount: Math.max(0, Math.round((Number(e.amount) || 0) * 1000) / 1000), // up to 3 decimals (millimes)
+        date: typeof e.date === "string" ? e.date : UI.dateKey(),
+      }),
+    },
+  },
+
+  search(q, has) {
+    const list = Expenses.all()
+      .filter((e) => has(e.description) || has(Expenses.CATEGORIES[e.category]?.label || ""))
+      .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+    return {
+      label: "Expenses",
+      items: list.map((e) => ({
+        text: e.description || Expenses.CATEGORIES[e.category].label, icon: Expenses.CATEGORIES[e.category]?.icon || "receipt",
+        page: "expenses", id: e.id, hint: `${Expenses.format(e.amount)} · ${UI.formatDay(e.date)}`,
+      })),
+    };
+  },
+
+  // Monthly budget warning
+  notifications() {
+    const budget = Number(Store.get("settings").monthlyBudget) || 0;
+    if (!budget) return [];
+    const spent = Expenses.sum(Expenses.inMonth(Expenses.monthKey(UI.dateKey())));
+    if (spent < budget * 0.8) return [];
+    return [{
+      tone: spent > budget ? "danger" : "amber", icon: "piggy-bank",
+      text: spent > budget ? "Over your monthly budget" : `${Math.round((spent / budget) * 100)}% of monthly budget used`,
+      sub: `${Expenses.format(spent)} of ${Expenses.format(budget)}`, page: "expenses",
+      before: () => { Expenses.state.month = Expenses.monthKey(UI.dateKey()); },
+    }];
+  },
+
+  quickAdd: [{
+    id: "expense", label: "Add expense", icon: "wallet", key: "X", order: 50,
+    async run() {
+      const created = await Expenses.openEditor(null, {}, { quiet: true });
+      if (created && typeof created === "object") { Expenses.state.month = Expenses.monthKey(created.date); Expenses.state.category = "all"; }
+      return { created, page: "expenses", label: "Expense", onDashboard: false };
+    },
+  }],
+});

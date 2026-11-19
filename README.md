@@ -25,7 +25,7 @@ Tip: bookmark it or set it as your browser's home page.
 - **Notifications** (bell): overdue tasks, tasks and events today, tomorrow's events, habits left today
 - **Weather:** current weather and a 5-day forecast for any city (default: Tunis), via [Open-Meteo](https://open-meteo.com/) (free, no API key)
 - **Favorite links:** categories, editing, and each site's own icon (loaded directly from the site, never through a third-party service)
-- **Global search** (`Ctrl+K` or `/`) across tasks, events, habits, notes, subjects, goals, expenses and links
+- **Search and command palette** (`Ctrl+K` or `/`): search tasks, events, habits, notes, subjects, goals, expenses and links, or run commands (go to a page, quick add, switch theme, export a backup…). Start with `>` for commands only.
 - **Quick add** for tasks, events, notes, study sessions, expenses, goals, habits and links (keys T, E, N, S, X, G, H, L while the menu is open)
 - **Dark theme by default**, with a light theme. Your choice is remembered.
 - **Settings:** theme and accent color, which dashboard widgets to show, your name, weather city, Pomodoro durations and sound, currency and budget, backup export/import, delete all data
@@ -36,8 +36,9 @@ Tip: bookmark it or set it as your browser's home page.
 
 Everything is saved in your browser's `localStorage`, only on this computer and in this browser. A different browser or computer starts empty.
 
-- **Back up:** Settings → Your data → **Export JSON**. Do this now and then.
+- **Back up:** Settings → Your data → **Export JSON**. Do this now and then. A reminder appears in the bell if you haven't for 14 days.
 - **Restore:** Settings → Your data → **Import JSON**. The file is checked before anything changes, and your current data is downloaded as a safety copy first.
+- **Automatic snapshots:** once a day, a full copy is kept inside the browser (IndexedDB), for the last 7 days. Settings → Your data → **Restore** goes back to one. Your current state is saved first, so even a restore can be undone.
 
 ## Project structure
 
@@ -55,16 +56,28 @@ css/
   animations.css      all animations + reduced-motion support
 js/
   icons.js            Lucide icons (copied in, so they work offline)
-  storage.js          saving/loading data + upgrading data from older versions
+  storage.js          saving/loading data, numbered upgrade steps (migrations), import/export
   ui.js               shared helpers: toasts, dialogs, animations, confetti
+  modules.js          the module registry: each feature registers its page, data,
+                      search results, reminders, quick actions and widgets here
+  backups.js          automatic daily snapshots (IndexedDB) and backup reminders
   widgets/            one file per feature (tasks, calendar, habits, notes, links, weather, …)
   charts.js           bar charts made of plain HTML (no chart library)
   notifications.js    the bell: reminders built from your tasks, events, habits, goals and budget
-  views.js            one function per page + the sidebar menu list
+  views.js            the built-in Dashboard and Settings pages
   router.js           switches pages using the address (#/tasks, #/habits, …)
   shell.js            sidebar, theme toggle, search, quick add, keyboard shortcuts
   app.js              starts everything (loaded last)
+tests/                automated tests (see tests/README.md)
 ```
+
+### Adding a new module
+
+1. Create `js/widgets/yourmodule.js` with the feature's code.
+2. At the bottom, call `Modules.register({ id, nav, page, collections, search, notifications, quickAdd, widgets })`. `js/modules.js` explains each part.
+3. Add one `<script>` line for it in `index.html`.
+
+The sidebar, router, search, command palette, bell, quick add, dashboard and backups pick it up automatically.
 
 Built with plain HTML, CSS and JavaScript: no frameworks, no build step. The scripts are normal `<script>` files (not JavaScript modules) on purpose, because browsers block modules when you open a file by double-clicking it.
 

@@ -298,3 +298,54 @@ const QuickNote = {
     drawRecent();
   },
 };
+
+// ---------------------------------------------------------
+// Register the Notes module (see js/modules.js)
+// ---------------------------------------------------------
+Modules.register({
+  id: "notes",
+  order: 60,
+  nav: { label: "Notes", icon: "notebook-pen" },
+  page: (container) => Notes.renderPage(container),
+
+  collections: {
+    // { id, title, content, category, tags, pinned, createdAt, updatedAt }
+    notes: {
+      default: [],
+      backup: true,
+      normalize: (n) => ({
+        title: "", content: "", category: "personal", pinned: false, createdAt: null, updatedAt: null,
+        ...n,
+        tags: Array.isArray(n.tags) ? n.tags : [],
+      }),
+    },
+    quickNote: { default: "", backup: true }, // the dashboard scratchpad
+  },
+
+  search(q) {
+    const items = Notes.sorted(Notes.all().filter((n) => Notes.matches(n, q))).slice(0, 6).map((n) => ({
+      text: Notes.titleOf(n), icon: n.pinned ? "pin" : "file-text", page: "notes", id: n.id, hint: Notes.CATEGORIES[n.category],
+      before: () => { Notes.state.query = ""; Notes.state.category = "all"; },
+    }));
+    const quick = Store.get("quickNote");
+    const at = quick.toLowerCase().indexOf(q);
+    if (at !== -1) {
+      const snippet = (at > 20 ? "…" : "") + quick.slice(Math.max(0, at - 20), at + q.length + 40).replace(/\s+/g, " ");
+      items.push({ text: snippet, icon: "notebook-pen", page: "dashboard", hint: "Quick note" });
+    }
+    return { label: "Notes", items };
+  },
+
+  quickAdd: [{
+    id: "note", label: "New note", icon: "file-text", key: "N", order: 30,
+    run() {
+      const note = Notes.create({});
+      Notes.state.query = "";
+      Notes.state.category = "all";
+      Router.go("notes", note.id);
+      setTimeout(() => document.querySelector('.note-editor [data-field="title"]')?.focus(), 50);
+    },
+  }],
+
+  widgets: [{ id: "note", label: "Quick note", span: 4, order: 70, render: (el) => QuickNote.render(el) }],
+});

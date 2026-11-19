@@ -416,3 +416,69 @@ const Tasks = {
     drawAll();
   },
 };
+
+// ---------------------------------------------------------
+// Register the Tasks module (see js/modules.js)
+// ---------------------------------------------------------
+Modules.register({
+  id: "tasks",
+  order: 20,
+  nav: { label: "Tasks", icon: "square-check-big" },
+  page: (container) => Tasks.renderPage(container),
+
+  collections: {
+    // { id, title, description, priority, dueDate, category, tags, done, createdAt, completedAt }
+    tasks: {
+      default: [],
+      backup: true,
+      normalize: (t) => ({
+        description: "", priority: "medium", dueDate: null, category: "other",
+        done: false, createdAt: null, completedAt: null,
+        ...t,
+        tags: Array.isArray(t.tags) ? t.tags : [],
+      }),
+    },
+  },
+
+  search(q, has) {
+    const tasks = Tasks.all().filter((t) => has(t.title) || has(t.description) || t.tags.some(has)).slice(0, 6);
+    return {
+      label: "Tasks",
+      items: tasks.map((t) => ({
+        text: t.title, icon: t.done ? "circle-check" : "square-check-big", page: "tasks", id: t.id,
+        hint: t.done ? "Done" : t.dueDate ? UI.relativeDay(t.dueDate) : "",
+        before: () => { Tasks.state.filter = "all"; Tasks.state.category = "all"; }, // make sure it's visible
+      })),
+    };
+  },
+
+  notifications() {
+    const today = UI.dateKey();
+    const items = [];
+    const overdue = Tasks.all().filter((t) => Tasks.isOverdue(t)).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    const showAll = () => { Tasks.state.filter = "all"; Tasks.state.category = "all"; };
+    overdue.slice(0, 5).forEach((t) => items.push({
+      tone: "danger", icon: "triangle-alert", text: t.title, sub: `Overdue · was due ${UI.relativeDay(t.dueDate).toLowerCase()}`,
+      page: "tasks", id: t.id, urgent: true, before: showAll,
+    }));
+    if (overdue.length > 5) items.push({
+      tone: "danger", icon: "triangle-alert", text: `${overdue.length - 5} more overdue tasks`, sub: "Open the Overdue tab",
+      page: "tasks", urgent: true, before: () => { Tasks.state.filter = "overdue"; Tasks.state.category = "all"; },
+    });
+    Tasks.all().filter((t) => !t.done && t.dueDate === today).forEach((t) => items.push({
+      tone: "accent", icon: "list-todo", text: t.title, sub: "Task due today", page: "tasks", id: t.id, urgent: true, before: showAll,
+    }));
+    return items;
+  },
+
+  quickAdd: [{
+    id: "task", label: "New task", icon: "square-check-big", key: "T", order: 10,
+    async run() {
+      const created = await Tasks.openEditor(null, {}, { quiet: true });
+      if (created && typeof created === "object") { Tasks.state.filter = "all"; Tasks.state.category = "all"; }
+      return { created, page: "tasks", label: "Task", onDashboard: true };
+    },
+  }],
+
+  widgets: [{ id: "tasks", label: "Today's tasks", span: 7, order: 10, render: (el) => Tasks.renderWidget(el) }],
+});

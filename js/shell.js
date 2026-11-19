@@ -1,11 +1,13 @@
 // =========================================================
 // SHELL: everything around the pages: sidebar, mobile menu,
-// theme toggle, global search and the quick-add menu.
+// theme toggle, the search / command palette and the quick-add menu.
 // These parts never get redrawn, so their listeners are set up once.
+// What appears in menus and search comes from the modules (js/modules.js).
 // =========================================================
 
 const Shell = {
   app: document.getElementById("app"),
+  lastResults: [], // what the search panel currently shows (used when you click one)
 
   init() {
     this.renderNav();
@@ -27,7 +29,7 @@ const Shell = {
 
   // ===== Sidebar =====
   renderNav() {
-    document.getElementById("sidebar-nav").innerHTML = NAV.map((item) => `
+    document.getElementById("sidebar-nav").innerHTML = Modules.navItems().map((item) => `
       <a class="nav-link" href="#/${item.id}" data-nav="${item.id}" title="${UI.escape(item.label)}">
         ${icon(item.icon)}
         <span class="nav-label">${UI.escape(item.label)}</span>
@@ -54,20 +56,15 @@ const Shell = {
 
   setupSidebar() {
     const collapseButton = document.getElementById("collapse-button");
-    const applyCollapsed = (collapsed) => {
+    this.applyCollapsed = (collapsed) => {
       this.app.classList.toggle("sidebar-collapsed", collapsed);
       collapseButton.innerHTML = icon(collapsed ? "panel-left-open" : "panel-left-close");
       const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
       collapseButton.setAttribute("aria-label", label);
       collapseButton.title = label;
     };
-    applyCollapsed(Store.get("settings").sidebarCollapsed);
-
-    collapseButton.addEventListener("click", () => {
-      const collapsed = !this.app.classList.contains("sidebar-collapsed");
-      Store.setSetting("sidebarCollapsed", collapsed);
-      applyCollapsed(collapsed);
-    });
+    this.applyCollapsed(Store.get("settings").sidebarCollapsed);
+    collapseButton.addEventListener("click", () => this.toggleSidebar());
 
     // Phones/tablets: the menu button opens the sidebar as a drawer
     const menuButton = document.getElementById("menu-button");
@@ -79,16 +76,24 @@ const Shell = {
     document.getElementById("sidebar-overlay").addEventListener("click", () => this.closeMobileNav());
   },
 
+  toggleSidebar() {
+    const collapsed = !this.app.classList.contains("sidebar-collapsed");
+    Store.setSetting("sidebarCollapsed", collapsed);
+    this.applyCollapsed(collapsed);
+  },
+
   closeMobileNav() {
     this.app.classList.remove("nav-open");
   },
 
   // ===== Theme =====
   setupTheme() {
-    document.getElementById("theme-button").addEventListener("click", () => {
-      this.setTheme(Store.get("settings").theme === "dark" ? "light" : "dark");
-    });
+    document.getElementById("theme-button").addEventListener("click", () => this.toggleTheme());
     this.updateThemeButton();
+  },
+
+  toggleTheme() {
+    this.setTheme(Store.get("settings").theme === "dark" ? "light" : "dark");
   },
 
   setTheme(theme) {
@@ -125,14 +130,14 @@ const Shell = {
     button.title = label;
   },
 
-  // ===== Global search =====
+  // ===== Search + command palette =====
   setupSearch() {
     const input = document.getElementById("search-input");
     const results = document.getElementById("search-results");
     document.getElementById("search-icon").innerHTML = icon("search");
 
     input.addEventListener("input", () => this.showResults(input.value));
-    input.addEventListener("focus", () => { if (input.value.trim()) this.showResults(input.value); });
+    input.addEventListener("focus", () => this.showResults(input.value));
 
     // Arrow keys move through results, Enter opens one
     input.addEventListener("keydown", (event) => {
@@ -152,93 +157,73 @@ const Shell = {
     });
 
     results.addEventListener("click", (event) => {
-      const item = event.target.closest(".menu-item");
-      if (!item) return;
+      const button = event.target.closest(".menu-item");
+      if (!button) return;
+      const item = this.lastResults[Number(button.dataset.index)];
       this.closeSearch();
       input.value = "";
       input.blur();
-      if (item.dataset.url) return window.open(item.dataset.url, "_blank", "noopener");
-      // Make sure the item will be visible on its page
-      if (item.dataset.page === "tasks") { Tasks.state.filter = "all"; Tasks.state.category = "all"; }
-      if (item.dataset.page === "notes") { Notes.state.query = ""; Notes.state.category = "all"; }
-      if (item.dataset.page === "goals") { Goals.state.horizon = "all"; Goals.state.category = "all"; }
-      if (item.dataset.date) { Calendar.state.selected = item.dataset.date; Calendar.state.cursor = item.dataset.date; }
-      Router.go(item.dataset.page, item.dataset.id || null);
+      if (!item) return;
+      if (item.run) return item.run();                                       // a command
+      if (item.url) return window.open(item.url, "_blank", "noopener");     // a link
+      item.before?.();                                                      // e.g. reset a filter so it's visible
+      Router.go(item.page, item.id || null);
     });
   },
 
-  // Find matching tasks, habits, notes and links
-  search(query) {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    const has = (text) => String(text).toLowerCase().includes(q);
-    const groups = [];
-
-    const tasks = Tasks.all().filter((t) => has(t.title) || has(t.description) || t.tags.some(has)).slice(0, 6);
-    if (tasks.length) groups.push({ label: "Tasks", items: tasks.map((t) => ({
-      text: t.title, icon: t.done ? "circle-check" : "square-check-big", page: "tasks", id: t.id,
-      hint: t.done ? "Done" : t.dueDate ? UI.relativeDay(t.dueDate) : "" })) });
-
-    const events = Calendar.all().filter((e) => has(e.title) || has(e.description))
-      .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
-    if (events.length) groups.push({ label: "Events", items: events.map((e) => ({
-      text: e.title, icon: Calendar.TYPES[e.type]?.icon || "calendar", page: "calendar", id: e.id, date: e.date, hint: UI.formatDay(e.date) })) });
-
-    const subjects = Study.subjects().filter((s) => has(s.name)).slice(0, 6);
-    if (subjects.length) groups.push({ label: "Subjects", items: subjects.map((s) => ({
-      text: s.name, icon: "graduation-cap", page: "study", id: s.id, hint: `This week: ${UI.formatDuration(Study.secondsBetween(...Study.periods().week, s.id))}` })) });
-
-    const habits = Habits.all().filter((h) => has(h.name)).slice(0, 6);
-    if (habits.length) groups.push({ label: "Habits", items: habits.map((h) => ({ text: h.name, icon: "flame", page: "habits", id: h.id })) });
-
-    const notes = Notes.sorted(Notes.all().filter((n) => Notes.matches(n, q))).slice(0, 6);
-    const noteItems = notes.map((n) => ({ text: Notes.titleOf(n), icon: n.pinned ? "pin" : "file-text", page: "notes", id: n.id, hint: Notes.CATEGORIES[n.category] }));
-    const quick = Store.get("quickNote");
-    const at = quick.toLowerCase().indexOf(q);
-    if (at !== -1) {
-      const snippet = (at > 20 ? "…" : "") + quick.slice(Math.max(0, at - 20), at + q.length + 40).replace(/\s+/g, " ");
-      noteItems.push({ text: snippet, icon: "notebook-pen", page: "dashboard", hint: "Quick note" });
-    }
-    if (noteItems.length) groups.push({ label: "Notes", items: noteItems });
-
-    const goals = Goals.all().filter((g) => has(g.title) || has(g.description)).slice(0, 6);
-    if (goals.length) groups.push({ label: "Goals", items: goals.map((g) => ({
-      text: g.title, icon: g.status === "completed" ? "trophy" : "target", page: "goals", id: g.id, hint: g.status === "completed" ? "Completed" : `${g.progress}%` })) });
-
-    const expenses = Expenses.all()
-      .filter((e) => has(e.description) || has(Expenses.CATEGORIES[e.category]?.label || ""))
-      .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
-    if (expenses.length) groups.push({ label: "Expenses", items: expenses.map((e) => ({
-      text: e.description || Expenses.CATEGORIES[e.category].label, icon: Expenses.CATEGORIES[e.category]?.icon || "receipt",
-      page: "expenses", id: e.id, hint: `${Expenses.format(e.amount)} · ${UI.formatDay(e.date)}` })) });
-
-    const links = Store.get("links").filter((l) => has(l.name) || has(l.url)).slice(0, 6);
-    if (links.length) groups.push({ label: "Links", items: links.map((l) => ({ text: l.name, icon: "external-link", url: Links.normalizeUrl(l.url), hint: "Opens in new tab" })) });
-
-    return groups;
+  // Everything the palette can DO (not data): pages, quick actions, app commands
+  commands() {
+    const list = [
+      ...Modules.navItems().map((n) => ({ label: `Go to ${n.label}`, icon: n.icon, keywords: `open page ${n.id}`, run: () => Router.go(n.id) })),
+      ...Modules.quickActions().map((a) => ({ label: a.label, icon: a.icon, keywords: "add create new quick", hint: a.key, run: () => this.runQuickAction(a) })),
+      { label: Store.get("settings").theme === "dark" ? "Switch to light theme" : "Switch to dark theme", icon: "sun", keywords: "theme dark light mode appearance", run: () => this.toggleTheme() },
+      { label: "Collapse or expand sidebar", icon: "panel-left-close", keywords: "sidebar menu hide show", run: () => this.toggleSidebar() },
+      { label: "Download a backup (Export JSON)", icon: "download", keywords: "backup export save data json", run: () => { Views.downloadBackup(); UI.toast("Backup downloaded"); } },
+      { label: "Show keyboard shortcuts", icon: "keyboard", keywords: "help keys shortcuts", run: () => this.showShortcuts() },
+      ...Modules.commands(),
+    ];
+    return list;
   },
 
-  showResults(query) {
+  // Commands whose name or keywords contain every word typed
+  matchCommands(query) {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    return this.commands().filter((c) => {
+      const text = `${c.label} ${c.keywords || ""}`.toLowerCase();
+      return words.every((w) => text.includes(w));
+    });
+  },
+
+  showResults(raw) {
     const results = document.getElementById("search-results");
-    if (!query.trim()) return this.closeSearch();
+    const commandMode = raw.trimStart().startsWith(">");
+    const q = (commandMode ? raw.trimStart().slice(1) : raw).trim();
 
     // Highlight the matching part of the text with <mark>
-    const q = query.trim();
     const mark = (text) => {
       const safe = UI.escape(text);
+      if (!q) return safe;
       const pattern = new RegExp(UI.escape(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
       return safe.replace(pattern, (m) => `<mark>${m}</mark>`);
     };
 
-    const groups = this.search(query);
+    // Empty box or ">": list commands. Otherwise: your data first, then matching commands.
+    let groups;
+    if (!q) groups = [{ label: "Commands", items: this.commands() }];
+    else if (commandMode) groups = [{ label: "Commands", items: this.matchCommands(q) }];
+    else groups = [...Modules.search(q), { label: "Commands", items: this.matchCommands(q).slice(0, 4) }];
+    groups = groups.filter((g) => g.items.length);
+
+    this.lastResults = groups.flatMap((g) => g.items);
+    let index = 0;
     results.innerHTML = groups.length
       ? groups.map((g) => `
-          <div class="search-group">${g.label}</div>
+          <div class="search-group">${UI.escape(g.label)}</div>
           ${g.items.map((item) => `
-            <button class="menu-item" type="button" data-page="${item.page || ""}" data-id="${UI.escape(item.id || "")}" data-date="${item.date || ""}"
-                    ${item.url ? `data-url="${UI.escape(item.url)}"` : ""}>
-              ${icon(item.icon)}<span class="result-text">${mark(item.text)}</span>${item.hint ? `<small>${item.hint}</small>` : ""}
+            <button class="menu-item" type="button" data-index="${index++}" ${item.run ? "data-command" : `data-page="${UI.escape(item.page || "")}"`}>
+              ${icon(item.icon)}<span class="result-text">${mark(item.text || item.label)}</span>${item.hint ? `<small>${UI.escape(item.hint)}</small>` : ""}
             </button>`).join("")}`).join("")
+        + (!q ? `<div class="search-tip">Type to search your data · start with <kbd>&gt;</kbd> for commands only</div>` : "")
       : `<div class="search-empty">No results for “${UI.escape(q)}”</div>`;
     results.hidden = false;
   },
@@ -254,26 +239,16 @@ const Shell = {
     button.innerHTML = `${icon("plus")}<span class="quick-add-label">Quick add</span>`;
     button.setAttribute("aria-label", "Quick add");
 
-    const actions = [
-      { id: "task", label: "New task", icon: "square-check-big", key: "T" },
-      { id: "event", label: "New event", icon: "calendar", key: "E" },
-      { id: "note", label: "New note", icon: "file-text", key: "N" },
-      { id: "study", label: "Start study session", icon: "hourglass", key: "S" },
-      { id: "expense", label: "Add expense", icon: "wallet", key: "X" },
-      { id: "goal", label: "New goal", icon: "target", key: "G" },
-      { id: "habit", label: "New habit", icon: "flame", key: "H" },
-      { id: "link", label: "New favorite link", icon: "link", key: "L" },
-    ];
+    const actions = Modules.quickActions();
     menu.innerHTML = actions.map((a) => `
-      <button class="menu-item" type="button" role="menuitem" data-action="${a.id}">${icon(a.icon)}${a.label}<small>${a.key}</small></button>`).join("");
+      <button class="menu-item" type="button" role="menuitem" data-action="${a.id}">${icon(a.icon)}${UI.escape(a.label)}<small>${a.key}</small></button>`).join("");
 
     // While the menu is open, a letter key picks the action (the letter shown on the right)
     menu.addEventListener("keydown", (event) => {
       const action = actions.find((a) => a.key === event.key.toUpperCase());
       if (action) {
         event.preventDefault();
-        this.closeQuickAdd();
-        this.quickAdd(action.id);
+        this.runQuickAction(action);
       }
     });
 
@@ -287,8 +262,7 @@ const Shell = {
     menu.addEventListener("click", (event) => {
       const item = event.target.closest("[data-action]");
       if (!item) return;
-      this.closeQuickAdd();
-      this.quickAdd(item.dataset.action);
+      this.runQuickAction(actions.find((a) => a.id === item.dataset.action));
     });
   },
 
@@ -297,85 +271,16 @@ const Shell = {
     document.getElementById("quick-add-button").setAttribute("aria-expanded", "false");
   },
 
-  async quickAdd(type) {
-    if (type === "note") {
-      const note = Notes.create({});
-      Notes.state.query = "";
-      Notes.state.category = "all";
-      Router.go("notes", note.id);
-      setTimeout(() => document.querySelector('.note-editor [data-field="title"]')?.focus(), 50);
-      return;
-    }
+  // Run a module's quick action. If it created something, show it:
+  // redraw and highlight it if it's visible here, otherwise offer a "View" button.
+  async runQuickAction(action) {
+    this.closeQuickAdd();
+    if (!action) return;
+    const result = await action.run();
+    if (!result || !result.created || typeof result.created !== "object") return; // cancelled, or handled by the module
 
-    if (type === "study") {
-      if (Study.activeSession()) {
-        UI.toast("A study session is already running.", { type: "info", actionLabel: "Open", onAction: () => Router.go("study") });
-        return;
-      }
-      if (!Study.subjects().length) {
-        UI.toast("First, add a subject (e.g. Mathematics).", { type: "info" });
-        if (!(await Study.openSubjectEditor())) return;
-      }
-      const values = await UI.form({
-        title: "Start a study session", submitLabel: "Start",
-        fields: [
-          { name: "subjectId", label: "Subject", type: "select", value: Study.draft.subjectId || Study.subjects()[0].id, options: Study.subjectOptions() },
-          { name: "description", label: "What are you studying? (optional)", placeholder: "e.g. Chapter 4 exercises" },
-        ],
-      });
-      if (values && Study.startTimer(values.subjectId, values.description)) {
-        Study.draft.subjectId = values.subjectId;
-        UI.toast(`Timer started for ${Study.subject(values.subjectId).name}`, { actionLabel: "Open", onAction: () => Router.go("study") });
-        if (["study", "dashboard"].includes(Router.currentId())) Router.refresh();
-      }
-      return;
-    }
-
-    let created = null;
-    let page = "";
-    const quiet = { quiet: true }; // we show our own toast below
-
-    if (type === "task") {
-      created = await Tasks.openEditor(null, {}, quiet);
-      page = "tasks";
-      if (created) { Tasks.state.filter = "all"; Tasks.state.category = "all"; }
-    }
-
-    if (type === "event") {
-      created = await Calendar.openEditor(null, {}, quiet);
-      page = "calendar";
-      if (created) { Calendar.state.selected = created.date; Calendar.state.cursor = created.date; }
-    }
-
-    if (type === "habit") {
-      created = await Habits.openEditor(null, quiet);
-      page = "habits";
-    }
-
-    if (type === "link") {
-      created = await Links.openEditor(null, quiet);
-      page = "dashboard";
-    }
-
-    if (type === "goal") {
-      created = await Goals.openEditor(null, {}, quiet);
-      page = "goals";
-      if (created) { Goals.state.horizon = "all"; Goals.state.category = "all"; }
-    }
-
-    if (type === "expense") {
-      created = await Expenses.openEditor(null, {}, quiet);
-      page = "expenses";
-      if (created && typeof created === "object") { Expenses.state.month = Expenses.monthKey(created.date); Expenses.state.category = "all"; }
-    }
-
-    if (!created || typeof created !== "object") return; // cancelled
-
-    // If the new item is visible on the current page, redraw and highlight it.
-    // Otherwise offer a button to go and see it.
+    const { created, page, label, onDashboard } = result;
     const current = Router.currentId();
-    const label = { task: "Task", event: "Event", habit: "Habit", link: "Link", goal: "Goal", expense: "Expense" }[type];
-    const onDashboard = ["tasks", "habits", "calendar", "dashboard"].includes(page); // goals/expenses aren't shown there
     if (current === page || (current === "dashboard" && onDashboard)) {
       Router.refresh(created.id);
       UI.toast(`${label} added`);
@@ -386,11 +291,13 @@ const Shell = {
 
   // ===== Keyboard shortcuts =====
   showShortcuts() {
+    const actions = Modules.quickActions();
     const rows = [
-      ["Ctrl + K  or  /", "Search everything"],
+      ["Ctrl + K  or  /", "Search everything, or run a command"],
+      [">", "In the search box: show commands only"],
       ["Q", "Open quick add"],
-      ["T  E  N  S  X  G  H  L", "In quick add: task, event, note, study session, expense, goal, habit, link"],
-      ["↑  ↓  Enter", "Move through search results and open one"],
+      [actions.map((a) => a.key).join("  "), `In quick add: ${actions.map((a) => a.label.toLowerCase()).join(", ")}`],
+      ["↑  ↓  Enter", "Move through results and open one"],
       ["Esc", "Close a menu, dialog or search"],
       ["Tab", "Move between buttons and fields"],
       ["?", "Show this list"],
@@ -413,10 +320,12 @@ const Shell = {
       // Are we typing in a field? (The key can also come from the page itself, which isn't an element.)
       const typing = event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable]");
 
-      // Ctrl+K (or ⌘K) or "/" focuses the search box
+      // Ctrl+K (or ⌘K) or "/" opens the search / command palette
       if ((event.key === "k" && (event.ctrlKey || event.metaKey)) || (event.key === "/" && !typing)) {
         event.preventDefault();
-        document.getElementById("search-input").focus();
+        const input = document.getElementById("search-input");
+        input.focus();
+        this.showResults(input.value);
       }
 
       const modalOpen = document.querySelector(".modal-backdrop");
@@ -431,7 +340,7 @@ const Shell = {
         document.getElementById("quick-add-button").click();
       }
 
-      if (event.key === "Escape" && !document.querySelector(".modal-backdrop")) {
+      if (event.key === "Escape" && !modalOpen) {
         this.closeSearch();
         this.closeQuickAdd();
         Notifications.close();

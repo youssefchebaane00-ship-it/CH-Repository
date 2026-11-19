@@ -14,9 +14,10 @@ const Router = {
     this.render();
   },
 
+  // The page in the address, if a module with a page has that name
   currentId() {
     const id = location.hash.replace(/^#\/?/, "");
-    return NAV.some((item) => item.id === id) ? id : "dashboard";
+    return Modules.get(id)?.page ? id : "dashboard";
   },
 
   // Go to a page, optionally highlighting one item on it
@@ -34,17 +35,24 @@ const Router = {
 
   render({ animate = true } = {}) {
     const id = this.currentId();
-    const item = NAV.find((n) => n.id === id);
+    const module = Modules.get(id);
+    const label = module.nav?.label || id;
     const view = document.getElementById("view");
 
     // Draw the page. Replacing the content also removes the old page's
     // elements and their event listeners, so nothing piles up in memory.
     view.innerHTML = "";
-    Views[id](view);
+    try {
+      module.page(view);
+    } catch (error) {
+      // A bug in one page must not freeze the whole app
+      console.error(`Page "${id}" failed:`, error);
+      view.innerHTML = `<section class="card">${UI.emptyState("triangle-alert", "This page couldn't load", "Your data is safe. Try another page or refresh.")}</section>`;
+    }
 
     if (animate) UI.replayAnimation(view, "view-enter");
-    document.getElementById("page-title").textContent = item.label;
-    this.pageTitle = `${item.label} · PersonalDashboard`; // study.js adds a running timer in front
+    document.getElementById("page-title").textContent = label;
+    this.pageTitle = `${label} · PersonalDashboard`; // study.js adds a running timer in front
     document.title = this.pageTitle;
     Shell.setActive(id);
     Shell.closeMobileNav();

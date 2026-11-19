@@ -294,3 +294,59 @@ const Goals = {
     drawAll();
   },
 };
+
+// ---------------------------------------------------------
+// Register the Goals module (see js/modules.js)
+// ---------------------------------------------------------
+Modules.register({
+  id: "goals",
+  order: 70,
+  nav: { label: "Goals", icon: "target" },
+  page: (container) => Goals.renderPage(container),
+
+  collections: {
+    // { id, title, description, category, horizon, targetDate, progress, status, createdAt, completedAt }
+    goals: {
+      default: [],
+      backup: true,
+      normalize: (g) => ({
+        description: "", category: "personal", horizon: "monthly", targetDate: null, status: "active",
+        createdAt: null, completedAt: null,
+        ...g,
+        progress: Math.min(100, Math.max(0, Math.round(Number(g.progress) || 0))),
+      }),
+    },
+  },
+
+  search(q, has) {
+    const showAll = () => { Goals.state.horizon = "all"; Goals.state.category = "all"; };
+    return {
+      label: "Goals",
+      items: Goals.all().filter((g) => has(g.title) || has(g.description)).slice(0, 6).map((g) => ({
+        text: g.title, icon: g.status === "completed" ? "trophy" : "target", page: "goals", id: g.id,
+        hint: g.status === "completed" ? "Completed" : `${g.progress}%`, before: showAll,
+      })),
+    };
+  },
+
+  // Goals whose target date is today or has passed
+  notifications() {
+    const today = UI.dateKey();
+    const showAll = () => { Goals.state.horizon = "all"; Goals.state.category = "all"; };
+    return Goals.all().filter((g) => g.status === "active" && g.targetDate && g.targetDate <= today)
+      .sort((a, b) => a.targetDate.localeCompare(b.targetDate)).slice(0, 3)
+      .map((g) => ({
+        tone: g.targetDate < today ? "danger" : "violet", icon: "target", text: g.title,
+        sub: `Goal ${g.targetDate < today ? "overdue" : "due today"} · ${g.progress}% done`, page: "goals", id: g.id, before: showAll,
+      }));
+  },
+
+  quickAdd: [{
+    id: "goal", label: "New goal", icon: "target", key: "G", order: 60,
+    async run() {
+      const created = await Goals.openEditor(null, {}, { quiet: true });
+      if (created && typeof created === "object") { Goals.state.horizon = "all"; Goals.state.category = "all"; }
+      return { created, page: "goals", label: "Goal", onDashboard: false };
+    },
+  }],
+});

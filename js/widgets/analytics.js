@@ -214,3 +214,14 @@ const Analytics = {
       </div>`;
   },
 };
+
+// ---------------------------------------------------------
+// Register the Analytics module (see js/modules.js)
+// ---------------------------------------------------------
+Modules.register({
+  id: "analytics",
+  order: 90,
+  nav: { label: "Analytics", icon: "chart-column" },
+  page: (container) => Analytics.renderPage(container),
+  widgets: [{ id: "week", label: "This week (productivity)", span: 4, order: 60, render: (el) => Analytics.renderWeekWidget(el) }],
+});

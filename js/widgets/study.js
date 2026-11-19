@@ -607,3 +607,96 @@ const Study = {
     this.renderStopwatch(container.querySelector("[data-stopwatch]"), { compact: true });
   },
 };
+
+// ---------------------------------------------------------
+// Register the Study Tracker module (see js/modules.js).
+// It also owns the Pomodoro's saved state.
+// ---------------------------------------------------------
+Modules.register({
+  id: "study",
+  order: 50,
+  nav: { label: "Study Tracker", icon: "graduation-cap" },
+  page: (container) => Study.renderPage(container),
+
+  collections: {
+    // { id, name, color, weeklyGoalHours, createdAt }
+    subjects: {
+      default: [],
+      backup: true,
+      normalize: (s) => ({ name: "Subject", color: "#22d3ee", weeklyGoalHours: 0, createdAt: null, ...s }),
+    },
+    // { id, subjectId, description, date, startedAt, durationSec, source: "timer"|"pomodoro"|"manual" }
+    studySessions: {
+      default: [],
+      backup: true,
+      normalize: (s) => ({
+        subjectId: "", description: "", source: "manual", startedAt: null,
+        ...s,
+        durationSec: Math.max(0, Math.round(Number(s.durationSec) || 0)),
+        date: typeof s.date === "string" ? s.date : UI.dateKey(),
+      }),
+    },
+    // Running timers: not in backups, and cleared when a backup is restored
+    activeSession: { default: null, resetOnImport: true },
+    pomodoro: { default: null, resetOnImport: true },
+  },
+
+  search(q, has) {
+    return {
+      label: "Subjects",
+      items: Study.subjects().filter((s) => has(s.name)).slice(0, 6).map((s) => ({
+        text: s.name, icon: "graduation-cap", page: "study", id: s.id,
+        hint: `This week: ${UI.formatDuration(Study.secondsBetween(...Study.periods().week, s.id))}`,
+      })),
+    };
+  },
+
+  // Running timers (not urgent, just a reminder they're on)
+  notifications() {
+    const items = [];
+    const active = Study.activeSession();
+    if (active) items.push({
+      tone: "accent", icon: "hourglass", text: `Study session ${active.runningSince ? "running" : "paused"}`,
+      sub: `${Study.subject(active.subjectId)?.name || "Study"} · ${UI.formatDuration(Study.activeElapsedMs() / 1000)} so far`, page: "study",
+    });
+    const pomo = Pomodoro.state();
+    if (pomo.status !== "idle") items.push({
+      tone: "rose", icon: "timer", text: `Pomodoro ${pomo.status === "paused" ? "paused" : "running"}`,
+      sub: `${Pomodoro.MODES[pomo.mode].label} · ${UI.formatClock(Pomodoro.remainingMs(pomo))} left`, page: "study",
+    });
+    return items;
+  },
+
+  quickAdd: [{
+    id: "study", label: "Start study session", icon: "hourglass", key: "S", order: 40,
+    async run() {
+      if (Study.activeSession()) {
+        UI.toast("A study session is already running.", { type: "info", actionLabel: "Open", onAction: () => Router.go("study") });
+        return;
+      }
+      if (!Study.subjects().length) {
+        UI.toast("First, add a subject (e.g. Mathematics).", { type: "info" });
+        if (!(await Study.openSubjectEditor())) return;
+      }
+      const values = await UI.form({
+        title: "Start a study session", submitLabel: "Start",
+        fields: [
+          { name: "subjectId", label: "Subject", type: "select", value: Study.draft.subjectId || Study.subjects()[0].id, options: Study.subjectOptions() },
+          { name: "description", label: "What are you studying? (optional)", placeholder: "e.g. Chapter 4 exercises" },
+        ],
+      });
+      if (values && Study.startTimer(values.subjectId, values.description)) {
+        Study.draft.subjectId = values.subjectId;
+        UI.toast(`Timer started for ${Study.subject(values.subjectId).name}`, { actionLabel: "Open", onAction: () => Router.go("study") });
+        if (["study", "dashboard"].includes(Router.currentId())) Router.refresh();
+      }
+    },
+  }],
+
+  widgets: [{ id: "study", label: "Study", span: 4, order: 30, render: (el) => Study.renderWidget(el) }],
+
+  commands: [
+    { label: "Start Pomodoro focus", icon: "timer", keywords: "pomodoro timer focus begin", run: () => { Pomodoro.start(); Router.go("study"); } },
+    { label: "Pause Pomodoro", icon: "pause", keywords: "pomodoro timer stop", run: () => Pomodoro.pause() },
+  ],
+});

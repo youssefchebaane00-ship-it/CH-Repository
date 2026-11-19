@@ -1,37 +1,13 @@
 // =========================================================
-// VIEWS: one function per page. Each draws its page into `container`.
-// NAV lists the pages in the sidebar, in order.
+// VIEWS: the two built-in pages, Dashboard and Settings.
+// Every other page belongs to its module (see js/modules.js).
 // =========================================================
 
-const NAV = [
-  { id: "dashboard", label: "Dashboard", icon: "layout-dashboard" },
-  { id: "tasks", label: "Tasks", icon: "square-check-big" },
-  { id: "calendar", label: "Calendar", icon: "calendar" },
-  { id: "habits", label: "Habits", icon: "flame" },
-  { id: "study", label: "Study Tracker", icon: "graduation-cap" },
-  { id: "notes", label: "Notes", icon: "notebook-pen" },
-  { id: "goals", label: "Goals", icon: "target" },
-  { id: "expenses", label: "Expenses", icon: "wallet" },
-  { id: "analytics", label: "Analytics", icon: "chart-column" },
-  { id: "settings", label: "Settings", icon: "settings" },
-];
-
 const Views = {
-  // Dashboard widgets: the name shown in Settings, grid width, and how to draw it
-  DASHBOARD_WIDGETS: [
-    { id: "tasks", label: "Today's tasks", span: 7, render: (el) => Tasks.renderWidget(el) },
-    { id: "habits", label: "Habits", span: 5, render: (el) => Habits.renderWidget(el) },
-    { id: "study", label: "Study", span: 4, render: (el) => Study.renderWidget(el) },
-    { id: "upcoming", label: "Upcoming events", span: 4, render: (el) => Calendar.renderWidget(el) },
-    { id: "weather", label: "Weather", span: 4, render: (el) => Weather.render(el) },
-    { id: "week", label: "This week (productivity)", span: 4, render: (el) => Analytics.renderWeekWidget(el) },
-    { id: "note", label: "Quick note", span: 4, render: (el) => QuickNote.render(el) },
-    { id: "links", label: "Favorite links", span: 4, render: (el) => Links.render(el) },
-  ],
-
+  // The dashboard shows every widget that modules register (unless hidden in Settings)
   dashboard(container) {
     const shown = Store.get("settings").dashboardWidgets;
-    const widgets = this.DASHBOARD_WIDGETS.filter((w) => shown[w.id] !== false);
+    const widgets = Modules.widgets().filter((w) => shown[w.id] !== false);
 
     container.innerHTML = `
       <div class="dashboard">
@@ -45,39 +21,16 @@ const Views = {
 
     Welcome.render(container.querySelector("[data-welcome]"));
     if (shown.stats !== false) Stats.renderCards(container.querySelector("[data-stats]"));
-    widgets.forEach((w) => w.render(container.querySelector(`[data-widget="${w.id}"]`)));
-  },
-
-  tasks(container) {
-    Tasks.renderPage(container);
-  },
-
-  calendar(container) {
-    Calendar.renderPage(container);
-  },
-
-  habits(container) {
-    Habits.renderPage(container);
-  },
-
-  study(container) {
-    Study.renderPage(container);
-  },
-
-  goals(container) {
-    Goals.renderPage(container);
-  },
-
-  expenses(container) {
-    Expenses.renderPage(container);
-  },
-
-  analytics(container) {
-    Analytics.renderPage(container);
-  },
-
-  notes(container) {
-    Notes.renderPage(container);
+    // One broken widget must not take the whole dashboard down
+    widgets.forEach((w) => {
+      const el = container.querySelector(`[data-widget="${w.id}"]`);
+      try {
+        w.render(el);
+      } catch (error) {
+        console.error(`Widget "${w.id}" failed:`, error);
+        el.innerHTML = UI.emptyState("triangle-alert", `${w.label} couldn't load`, "Try refreshing the page. Your data is safe.");
+      }
+    });
   },
 
   settings(container) {
@@ -109,7 +62,7 @@ const Views = {
           <div class="card-header"><h3 class="card-title"><span class="card-icon sky">${icon("layout-dashboard")}</span>Dashboard</h3></div>
           <p class="muted small">Choose what appears on your dashboard. The welcome banner is always shown.</p>
           <div class="widget-toggles" data-widget-toggles>
-            ${[{ id: "stats", label: "Statistics cards" }, ...this.DASHBOARD_WIDGETS].map((w) => `
+            ${[{ id: "stats", label: "Statistics cards" }, ...Modules.widgets()].map((w) => `
               <label class="toggle-row">
                 <input type="checkbox" data-widget="${w.id}" ${settings.dashboardWidgets[w.id] !== false ? "checked" : ""}>
                 <span>${UI.escape(w.label)}</span>
@@ -187,17 +140,31 @@ const Views = {
           </div>
         </section>
 
-        <section class="card">
+        <section class="card" data-id="your-data">
           <div class="card-header">
             <h3 class="card-title"><span class="card-icon emerald">${icon("database")}</span>Your data</h3>
             <span class="badge" title="Approximate space used in this browser">${(Store.usageBytes() / 1024).toFixed(1)} KB used</span>
           </div>
+          <div class="storage-meter">
+            <div class="daily-progress-info">
+              <span>Browser storage</span>
+              <strong>${Math.max(0.1, (Store.usageBytes() / Store.QUOTA_BYTES) * 100).toFixed(1)}% of about 5 MB</strong>
+            </div>
+            <div class="progress-track thin"><div class="progress-bar" style="width:${Math.min(100, (Store.usageBytes() / Store.QUOTA_BYTES) * 100)}%"></div></div>
+          </div>
           <div class="setting-row">
             <div class="setting-text">
               <strong>Download a backup</strong>
-              <span>Everything is stored only in this browser. Save a backup file now and then.</span>
+              <span data-last-export>${this.lastExportText()}</span>
             </div>
             <button class="btn btn-secondary" type="button" data-export>${icon("download")}Export JSON</button>
+          </div>
+          <div class="setting-row snapshots-row" data-id="snapshots">
+            <div class="setting-text">
+              <strong>Automatic snapshots</strong>
+              <span>A copy of everything is saved in this browser once a day (the last 7 days are kept). Use one to go back if something goes wrong.</span>
+            </div>
+            <ul class="snapshot-list" data-snapshots><li class="muted small">Loading…</li></ul>
           </div>
           <div class="setting-row">
             <div class="setting-text">
@@ -319,8 +286,53 @@ const Views = {
     // Data: export, import, delete
     container.querySelector("[data-export]").addEventListener("click", () => {
       this.downloadBackup();
+      container.querySelector("[data-last-export]").textContent = this.lastExportText();
       UI.toast("Backup downloaded");
     });
+
+    // Snapshots (loaded from IndexedDB, so they arrive a moment later)
+    const snapshotList = container.querySelector("[data-snapshots]");
+    const drawSnapshots = async () => {
+      try {
+        const snapshots = await Backups.list();
+        snapshotList.innerHTML = snapshots.length ? snapshots.map((s) => `
+          <li class="snapshot" data-snapshot="${UI.escape(s.id)}">
+            <span class="snapshot-text">
+              <strong>${UI.escape(UI.relativeDay(s.date))} · ${new Date(s.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                ${s.reason === "before-restore" ? `<span class="badge">before a restore</span>` : ""}</strong>
+              <span>${UI.escape(s.summary)} · ${(s.sizeBytes / 1024).toFixed(1)} KB</span>
+            </span>
+            <button class="btn-icon small" type="button" data-download-snapshot aria-label="Download this snapshot" title="Download">${icon("download")}</button>
+            <button class="btn btn-secondary compact" type="button" data-restore-snapshot>${icon("rotate-ccw")}Restore</button>
+          </li>`).join("")
+          : `<li class="muted small">No snapshots yet. The first one is made automatically today.</li>`;
+      } catch {
+        snapshotList.innerHTML = `<li class="muted small">Snapshots aren't available in this browser. Use Export JSON instead.</li>`;
+      }
+    };
+    snapshotList.addEventListener("click", async (event) => {
+      const row = event.target.closest("[data-snapshot]");
+      if (!row) return;
+      if (event.target.closest("[data-download-snapshot]")) {
+        Backups.download(row.dataset.snapshot);
+        return;
+      }
+      if (!event.target.closest("[data-restore-snapshot]")) return;
+      const ok = await UI.confirm({
+        title: "Go back to this snapshot?",
+        message: `All current data will be replaced by this snapshot (${row.querySelector(".snapshot-text span").textContent}). Your current data is saved as a snapshot first, so you can undo this.`,
+        confirmLabel: "Restore snapshot",
+      });
+      if (!ok) return;
+      try {
+        await Backups.restore(row.dataset.snapshot, { reload: false });
+        UI.toast("Snapshot restored. Reloading…", { type: "info" });
+        setTimeout(() => location.reload(), 900);
+      } catch (error) {
+        UI.toast(`Couldn't restore: ${error.message} Nothing was changed.`, { type: "error", duration: 7000 });
+      }
+    });
+    drawSnapshots();
 
     container.querySelector("[data-import]").addEventListener("change", async (event) => {
       const file = event.target.files[0];
@@ -343,6 +355,7 @@ const Views = {
       });
       if (!ok) return;
       this.downloadBackup("before-import");
+      try { await Backups.create("before-restore"); } catch {} // a second safety copy, inside the browser
       Store.importAll(result.data);
       UI.toast("Backup restored. Reloading…", { type: "info" });
       setTimeout(() => location.reload(), 900); // start fresh with the restored data
@@ -362,6 +375,12 @@ const Views = {
     });
   },
 
+  lastExportText() {
+    const days = Backups.daysSinceExport();
+    if (days === null) return "You haven't downloaded a backup file yet. Your data only lives in this browser.";
+    return `Last backup file: ${days === 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`}. A reminder appears after ${Backups.REMIND_AFTER_DAYS} days.`;
+  },
+
   ACCENTS: {
     cyan: { label: "Cyan", color: "#22d3ee" },
     violet: { label: "Violet", color: "#a78bfa" },
@@ -374,6 +393,7 @@ const Views = {
   // Save all data to a .json file: we build the file in memory and
   // "click" a hidden download link.
   downloadBackup(suffix = "") {
+    Store.setSetting("lastExportAt", new Date().toISOString()); // remembered for the backup reminder
     const blob = new Blob([JSON.stringify(Store.exportAll(), null, 2)], { type: "application/json" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -389,3 +409,7 @@ const Views = {
       </div>`;
   },
 };
+
+// The two built-in pages register like any other module
+Modules.register({ id: "dashboard", order: 10, nav: { label: "Dashboard", icon: "layout-dashboard" }, page: (container) => Views.dashboard(container) });
+Modules.register({ id: "settings", order: 100, nav: { label: "Settings", icon: "settings" }, page: (container) => Views.settings(container) });

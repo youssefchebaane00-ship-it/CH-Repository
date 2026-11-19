@@ -371,3 +371,61 @@ const Calendar = {
     drawAll();
   },
 };
+
+// ---------------------------------------------------------
+// Register the Calendar module (see js/modules.js)
+// ---------------------------------------------------------
+Modules.register({
+  id: "calendar",
+  order: 30,
+  nav: { label: "Calendar", icon: "calendar" },
+  page: (container) => Calendar.renderPage(container),
+
+  collections: {
+    // { id, title, description, date, startTime, endTime, type }
+    events: {
+      default: [],
+      backup: true,
+      normalize: (e) => ({ description: "", startTime: "", endTime: "", type: "event", ...e }),
+    },
+  },
+
+  search(q, has) {
+    const events = Calendar.all().filter((e) => has(e.title) || has(e.description))
+      .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+    return {
+      label: "Events",
+      items: events.map((e) => ({
+        text: e.title, icon: Calendar.TYPES[e.type]?.icon || "calendar", page: "calendar", id: e.id, hint: UI.formatDay(e.date),
+        before: () => { Calendar.state.selected = e.date; Calendar.state.cursor = e.date; }, // open on that day
+      })),
+    };
+  },
+
+  notifications() {
+    const today = UI.dateKey();
+    const tomorrow = UI.addDays(today, 1);
+    const openDay = (date) => () => { Calendar.state.selected = date; Calendar.state.cursor = date; };
+    return [
+      ...Calendar.upcoming(50).filter((e) => e.date === today).map((e) => ({
+        tone: "violet", icon: Calendar.TYPES[e.type]?.icon || "calendar", text: e.title, sub: `Today · ${Calendar.timeLabel(e)}`,
+        page: "calendar", id: e.id, urgent: true, before: openDay(e.date),
+      })),
+      ...Calendar.all().filter((e) => e.date === tomorrow).sort(Calendar.byTime).map((e) => ({
+        tone: "sky", icon: Calendar.TYPES[e.type]?.icon || "calendar", text: e.title, sub: `Tomorrow · ${Calendar.timeLabel(e)}`,
+        page: "calendar", id: e.id, before: openDay(e.date),
+      })),
+    ];
+  },
+
+  quickAdd: [{
+    id: "event", label: "New event", icon: "calendar", key: "E", order: 20,
+    async run() {
+      const created = await Calendar.openEditor(null, {}, { quiet: true });
+      if (created && typeof created === "object") { Calendar.state.selected = created.date; Calendar.state.cursor = created.date; }
+      return { created, page: "calendar", label: "Event", onDashboard: true };
+    },
+  }],
+
+  widgets: [{ id: "upcoming", label: "Upcoming events", span: 4, order: 40, render: (el) => Calendar.renderWidget(el) }],
+});

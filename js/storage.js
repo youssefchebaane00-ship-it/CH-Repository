@@ -1,34 +1,20 @@
 // =========================================================
 // STORAGE: the one place that reads and writes saved data.
 //
-// Every collection lives in localStorage under a "pd." key:
-//   pd.tasks, pd.habits, pd.links, pd.quickNote, pd.settings
-// Other files never touch localStorage directly. They call
-// Store.get("tasks") and Store.set("tasks", newList).
+// Each piece of data ("collection") lives in localStorage under a "pd." key,
+// e.g. pd.tasks or pd.settings. Other files never touch localStorage directly:
+// they call Store.get("tasks") and Store.set("tasks", newList).
+//
+// Modules declare their own collections (default value, how to repair old
+// items, whether it goes into backups) through js/modules.js, which calls
+// Store.defineCollection(). Only the settings are defined here.
 // =========================================================
 
 const Store = {
   PREFIX: "pd.",
-  VERSION: 2,
 
-  // What each collection looks like when nothing is saved yet
+  // Settings shared by the whole app
   DEFAULTS: {
-    tasks: [],        // { id, title, description, priority, dueDate, category, tags, done, createdAt, completedAt }
-    habits: [],       // { id, name, frequency: "daily"|"weekly", weeklyTarget, doneDays: ["2026-11-17", ...], createdAt }
-    events: [],       // { id, title, description, date, startTime, endTime, type }
-    notes: [],        // { id, title, content, category, tags, pinned, createdAt, updatedAt }
-    subjects: [],     // { id, name, color, weeklyGoalHours, createdAt }
-    studySessions: [],// { id, subjectId, description, date, startedAt, durationSec, source: "timer"|"pomodoro"|"manual" }
-    goals: [],        // { id, title, description, category, horizon, targetDate, progress, status, createdAt, completedAt }
-    expenses: [],     // { id, amount, category, date, description, createdAt }
-    activeSession: null, // the running study stopwatch (see study.js)
-    pomodoro: null,      // the Pomodoro timer state (see pomodoro.js)
-    links: [          // { id, name, url, category }
-      { id: "default-google", name: "Google", url: "https://www.google.com", category: "tools" },
-      { id: "default-youtube", name: "YouTube", url: "https://www.youtube.com", category: "entertainment" },
-      { id: "default-gmail", name: "Gmail", url: "https://mail.google.com", category: "tools" },
-    ],
-    quickNote: "",
     settings: {
       theme: "dark",
       weatherCity: "Tunis",
@@ -42,59 +28,34 @@ const Store = {
       currency: "TND",
       monthlyBudget: 0,       // 0 = no budget
       accent: "cyan",
-      // Which dashboard widgets are shown (Settings → Dashboard)
-      dashboardWidgets: { stats: true, tasks: true, habits: true, study: true, upcoming: true, week: true, weather: true, note: true, links: true },
+      lastExportAt: null,     // when a backup file was last downloaded
+      // Which dashboard widgets are shown (Settings → Dashboard). Missing = shown.
+      dashboardWidgets: {},
     },
   },
 
-  // Fill in fields that older saved items don't have yet. This runs every
-  // time a list is loaded, so old data always matches the newest format.
-  NORMALIZE: {
-    tasks: (t) => ({
-      description: "", priority: "medium", dueDate: null, category: "other",
-      done: false, createdAt: null, completedAt: null,
-      ...t,
-      tags: Array.isArray(t.tags) ? t.tags : [],
-    }),
-    habits: (h) => ({
-      frequency: "daily", weeklyTarget: 3, createdAt: null,
-      ...h,
-      doneDays: Array.isArray(h.doneDays) ? h.doneDays.filter((d) => typeof d === "string") : [],
-    }),
-    events: (e) => ({ description: "", startTime: "", endTime: "", type: "event", ...e }),
-    notes: (n) => ({
-      title: "", content: "", category: "personal", pinned: false, createdAt: null, updatedAt: null,
-      ...n,
-      tags: Array.isArray(n.tags) ? n.tags : [],
-    }),
-    links: (l) => ({ category: "other", ...l }),
-    goals: (g) => ({
-      description: "", category: "personal", horizon: "monthly", targetDate: null, status: "active",
-      createdAt: null, completedAt: null,
-      ...g,
-      progress: Math.min(100, Math.max(0, Math.round(Number(g.progress) || 0))),
-    }),
-    expenses: (e) => ({
-      category: "other", description: "", createdAt: null,
-      ...e,
-      amount: Math.max(0, Math.round((Number(e.amount) || 0) * 1000) / 1000), // up to 3 decimals (millimes)
-      date: typeof e.date === "string" ? e.date : UI.dateKey(),
-    }),
-    subjects: (s) => ({ name: "Subject", color: "#22d3ee", weeklyGoalHours: 0, createdAt: null, ...s }),
-    studySessions: (s) => ({
-      subjectId: "", description: "", source: "manual", startedAt: null,
-      ...s,
-      durationSec: Math.max(0, Math.round(Number(s.durationSec) || 0)),
-      date: typeof s.date === "string" ? s.date : UI.dateKey(),
-    }),
-  },
-
+  NORMALIZE: {},      // name → function that repairs one item of a list
+  collections: {},    // name → { backup, resetOnImport }
   cache: {},          // data already read, so we don't parse JSON every time
   listeners: [],
+
+  // Called by Modules.register() for each collection a module declares
+  defineCollection(name, { default: defaultValue, normalize = null, backup = false, resetOnImport = false }) {
+    if (name in this.collections || name === "settings") throw new Error(`Collection "${name}" is defined twice.`);
+    this.DEFAULTS[name] = defaultValue;
+    if (normalize) this.NORMALIZE[name] = normalize;
+    this.collections[name] = { backup, resetOnImport };
+  },
+
+  // Names of the collections that go into backup files, in definition order
+  backupNames() {
+    return Object.keys(this.collections).filter((name) => this.collections[name].backup);
+  },
 
   // Read a collection (returns the saved value, or a copy of the default)
   get(name) {
     if (!(name in this.cache)) {
+      if (!(name in this.DEFAULTS)) throw new Error(`Unknown collection "${name}".`);
       let value;
       try {
         const saved = localStorage.getItem(this.PREFIX + name);
@@ -113,7 +74,7 @@ const Store = {
       // Settings: fill in any option added in a newer version
       if (name === "settings") {
         value = { ...this.DEFAULTS.settings, ...value };
-        value.dashboardWidgets = { ...this.DEFAULTS.settings.dashboardWidgets, ...(value.dashboardWidgets || {}) };
+        value.dashboardWidgets = { ...(value.dashboardWidgets || {}) };
       }
       this.cache[name] = value;
     }
@@ -150,79 +111,82 @@ const Store = {
   },
 
   // ---------------------------------------------------------
-  // MIGRATION from version 1 (the original single-page dashboard).
-  // Version 1 used the keys: todos, habits, links, notes, weatherCity, theme.
-  // We COPY that data into the new format. The old keys are left untouched
-  // as a backup, so nothing can be lost.
+  // MIGRATIONS: numbered upgrade steps for saved data.
+  // pd.version remembers the last step that ran. On start, every newer
+  // step runs once, in order. To change the data format in the future,
+  // ADD a step at the end; never edit an old one.
+  // Steps copy and repair data; they never delete the user's data.
   // ---------------------------------------------------------
+  MIGRATIONS: [
+    {
+      to: 2,
+      about: "Version 1 (single page) → 2.0: copy todos, habits, links, notes and settings into the new format",
+      run(store) {
+        const readOld = (key) => {
+          try {
+            const saved = localStorage.getItem(key);
+            return saved === null ? undefined : JSON.parse(saved);
+          } catch {
+            return undefined;
+          }
+        };
+        const now = new Date().toISOString();
+
+        // The old keys are left untouched as a backup, so nothing can be lost.
+        const oldTodos = readOld("todos");
+        if (Array.isArray(oldTodos)) {
+          store.set("tasks", oldTodos.filter((t) => t && typeof t.text === "string").map((t) => ({
+            id: store.newId(), title: t.text, done: Boolean(t.done),
+            createdAt: now, completedAt: null, // version 1 didn't record WHEN a task was finished
+          })));
+        }
+        const oldHabits = readOld("habits");
+        if (Array.isArray(oldHabits)) {
+          store.set("habits", oldHabits.filter((h) => h && typeof h.name === "string").map((h) => ({
+            id: store.newId(), name: h.name,
+            doneDays: Array.isArray(h.doneDays) ? h.doneDays.filter((d) => typeof d === "string") : [],
+            createdAt: null, // unknown in version 1
+          })));
+        }
+        const oldLinks = readOld("links");
+        if (Array.isArray(oldLinks)) {
+          store.set("links", oldLinks.filter((l) => l && typeof l.name === "string" && typeof l.url === "string")
+            .map((l) => ({ id: store.newId(), name: l.name, url: l.url })));
+        }
+        const oldNotes = readOld("notes");
+        if (typeof oldNotes === "string") store.set("quickNote", oldNotes);
+
+        const settings = { ...store.get("settings") };
+        const oldTheme = readOld("theme");
+        if (oldTheme === "light" || oldTheme === "dark") settings.theme = oldTheme;
+        const oldCity = readOld("weatherCity");
+        if (typeof oldCity === "string" && oldCity.trim()) settings.weatherCity = oldCity;
+        store.set("settings", settings);
+      },
+    },
+  ],
+
+  // The current data version = the number of the last step
+  get VERSION() {
+    return this.MIGRATIONS[this.MIGRATIONS.length - 1].to;
+  },
+
   migrate() {
-    let version = 0;
+    let version;
     try {
       version = Number(localStorage.getItem(this.PREFIX + "version")) || 0;
     } catch {
       return; // storage blocked: nothing to migrate
     }
-    if (version >= this.VERSION) return;
-
-    const readOld = (key) => {
+    for (const step of this.MIGRATIONS) {
+      if (version >= step.to) continue;
+      step.run(this);
+      version = step.to;
       try {
-        const saved = localStorage.getItem(key);
-        return saved === null ? undefined : JSON.parse(saved);
-      } catch {
-        return undefined;
-      }
-    };
-    const now = new Date().toISOString();
-
-    const oldTodos = readOld("todos");
-    if (Array.isArray(oldTodos)) {
-      this.set("tasks", oldTodos
-        .filter((t) => t && typeof t.text === "string")
-        .map((t) => ({
-          id: this.newId(),
-          title: t.text,
-          done: Boolean(t.done),
-          createdAt: now,
-          completedAt: null, // version 1 didn't record WHEN a task was finished
-        })));
+        localStorage.setItem(this.PREFIX + "version", String(version)); // remember after EACH step
+      } catch {}
     }
-
-    const oldHabits = readOld("habits");
-    if (Array.isArray(oldHabits)) {
-      this.set("habits", oldHabits
-        .filter((h) => h && typeof h.name === "string")
-        .map((h) => ({
-          id: this.newId(),
-          name: h.name,
-          doneDays: Array.isArray(h.doneDays) ? h.doneDays.filter((d) => typeof d === "string") : [],
-          createdAt: null, // unknown in version 1
-        })));
-    }
-
-    const oldLinks = readOld("links");
-    if (Array.isArray(oldLinks)) {
-      this.set("links", oldLinks
-        .filter((l) => l && typeof l.name === "string" && typeof l.url === "string")
-        .map((l) => ({ id: this.newId(), name: l.name, url: l.url })));
-    }
-
-    const oldNotes = readOld("notes");
-    if (typeof oldNotes === "string") this.set("quickNote", oldNotes);
-
-    const settings = { ...this.get("settings") };
-    const oldTheme = readOld("theme");
-    if (oldTheme === "light" || oldTheme === "dark") settings.theme = oldTheme;
-    const oldCity = readOld("weatherCity");
-    if (typeof oldCity === "string" && oldCity.trim()) settings.weatherCity = oldCity;
-    this.set("settings", settings);
-
-    try {
-      localStorage.setItem(this.PREFIX + "version", String(this.VERSION));
-    } catch {}
   },
-
-  // The lists that go into a backup file
-  BACKUP_LISTS: ["tasks", "habits", "events", "notes", "subjects", "studySessions", "goals", "expenses", "links"],
 
   // ---------------------------------------------------------
   // IMPORT: check a backup file thoroughly BEFORE replacing anything.
@@ -244,26 +208,31 @@ const Store = {
 
     const data = {};
     const summary = [];
-    for (const name of this.BACKUP_LISTS) {
-      const list = file.data[name];
-      if (list === undefined) { data[name] = structuredClone(this.DEFAULTS[name]); continue; } // older backups
-      if (!Array.isArray(list)) return { ok: false, error: `“${name}” should be a list.` };
-      if (list.length > 100000) return { ok: false, error: `“${name}” is suspiciously large.` };
-      const bad = list.find((item) => !item || typeof item !== "object" || Array.isArray(item) || typeof item.id !== "string" || !item.id);
-      if (bad !== undefined) return { ok: false, error: `“${name}” contains an invalid entry (every item needs an id).` };
-      if (new Set(list.map((item) => item.id)).size !== list.length) return { ok: false, error: `“${name}” contains duplicate ids.` };
-      data[name] = list.map(this.NORMALIZE[name]);
-      summary.push(`${list.length} ${name.replace(/([A-Z])/g, " $1").toLowerCase()}`);
-    }
+    for (const name of this.backupNames()) {
+      const value = file.data[name];
+      const defaultValue = this.DEFAULTS[name];
+      if (value === undefined) { data[name] = structuredClone(defaultValue); continue; } // older backups
 
-    const note = file.data.quickNote;
-    if (note !== undefined && typeof note !== "string") return { ok: false, error: "The quick note should be text." };
-    data.quickNote = note || "";
+      if (typeof defaultValue === "string") {
+        if (typeof value !== "string") return { ok: false, error: `“${name}” should be text.` };
+        data[name] = value.slice(0, 1000000);
+        continue;
+      }
+
+      if (!Array.isArray(value)) return { ok: false, error: `“${name}” should be a list.` };
+      if (value.length > 100000) return { ok: false, error: `“${name}” is suspiciously large.` };
+      const bad = value.find((item) => !item || typeof item !== "object" || Array.isArray(item) || typeof item.id !== "string" || !item.id);
+      if (bad !== undefined) return { ok: false, error: `“${name}” contains an invalid entry (every item needs an id).` };
+      if (new Set(value.map((item) => item.id)).size !== value.length) return { ok: false, error: `“${name}” contains duplicate ids.` };
+      data[name] = this.NORMALIZE[name] ? value.map(this.NORMALIZE[name]) : value;
+      summary.push(`${value.length} ${name.replace(/([A-Z])/g, " $1").toLowerCase()}`);
+    }
 
     // Settings: keep only known options with sensible values
     const s = file.data.settings && typeof file.data.settings === "object" ? file.data.settings : {};
     const d = this.DEFAULTS.settings;
     const num = (v, min, max, fallback) => (Number.isFinite(Number(v)) && Number(v) >= min && Number(v) <= max ? Number(v) : fallback);
+    const widgets = s.dashboardWidgets && typeof s.dashboardWidgets === "object" ? s.dashboardWidgets : {};
     data.settings = {
       ...d,
       theme: s.theme === "light" ? "light" : "dark",
@@ -278,7 +247,9 @@ const Store = {
       currency: typeof s.currency === "string" && /^[A-Z]{3}$/.test(s.currency) ? s.currency : d.currency,
       monthlyBudget: num(s.monthlyBudget, 0, 10000000, 0),
       accent: typeof s.accent === "string" && /^[a-z]{3,10}$/.test(s.accent) ? s.accent : d.accent,
-      dashboardWidgets: { ...d.dashboardWidgets, ...(s.dashboardWidgets && typeof s.dashboardWidgets === "object" ? s.dashboardWidgets : {}) },
+      lastExportAt: typeof s.lastExportAt === "string" ? s.lastExportAt : null,
+      // only true/false values for widget names
+      dashboardWidgets: Object.fromEntries(Object.entries(widgets).filter(([k, v]) => /^[a-z]{2,20}$/.test(k) && typeof v === "boolean")),
     };
 
     return { ok: true, data, summary, exportedAt: file.exportedAt };
@@ -286,9 +257,11 @@ const Store = {
 
   // Replace everything with validated backup data
   importAll(data) {
-    for (const name of [...this.BACKUP_LISTS, "quickNote", "settings"]) this.set(name, data[name]);
-    this.set("activeSession", null); // running timers can't be restored from a backup
-    this.set("pomodoro", null);
+    for (const name of [...this.backupNames(), "settings"]) this.set(name, data[name]);
+    // Things that can't be restored from a backup (e.g. running timers) go back to empty
+    Object.keys(this.collections)
+      .filter((name) => this.collections[name].resetOnImport)
+      .forEach((name) => this.set(name, structuredClone(this.DEFAULTS[name])));
   },
 
   // Delete all saved data (used by Settings → Delete all data)
@@ -297,12 +270,12 @@ const Store = {
       Object.keys(localStorage)
         .filter((key) => key.startsWith(this.PREFIX) || ["todos", "habits", "links", "notes", "weatherCity", "theme"].includes(key))
         .forEach((key) => localStorage.removeItem(key));
-      localStorage.setItem(this.PREFIX + "version", String(this.VERSION)); // don't re-run the version 1 migration
+      localStorage.setItem(this.PREFIX + "version", String(this.VERSION)); // don't re-run old upgrade steps
     } catch {}
     this.cache = {};
   },
 
-  // Roughly how much browser storage the app uses
+  // Roughly how much browser storage the app uses (localStorage counts 2 bytes per character)
   usageBytes() {
     try {
       return Object.keys(localStorage)
@@ -313,15 +286,17 @@ const Store = {
     }
   },
 
-  // Everything in one object, used for the backup file
+  // Browsers give each site about 5 MB of localStorage
+  QUOTA_BYTES: 5 * 1024 * 1024,
+
+  // Everything in one object, used for backup files and snapshots
   exportAll() {
     return {
       app: "PersonalDashboard",
       version: this.VERSION,
       exportedAt: new Date().toISOString(),
       data: {
-        ...Object.fromEntries(this.BACKUP_LISTS.map((name) => [name, this.get(name)])),
-        quickNote: this.get("quickNote"),
+        ...Object.fromEntries(this.backupNames().map((name) => [name, this.get(name)])),
         settings: this.get("settings"),
       },
     };

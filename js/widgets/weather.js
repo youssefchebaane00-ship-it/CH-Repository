@@ -151,3 +151,12 @@ const Weather = {
     UI.replayAnimation(body, "fade-in");
   },
 };
+
+// ---------------------------------------------------------
+// Register the Weather module: a dashboard widget only
+// ---------------------------------------------------------
+Modules.register({
+  id: "weather",
+  order: 86,
+  widgets: [{ id: "weather", label: "Weather", span: 4, order: 50, render: (el) => Weather.render(el) }],
+});

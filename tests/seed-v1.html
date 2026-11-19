@@ -1,0 +1,11 @@
+<script>
+localStorage.clear();
+function key(o){const d=new Date();d.setDate(d.getDate()-o);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+localStorage.setItem('todos', JSON.stringify([{text:'Old task A',done:false},{text:'Old task B',done:true}]));
+localStorage.setItem('habits', JSON.stringify([{name:'Read',doneDays:[1,2,3,4,5,6,7].map(key)},{name:'Water',doneDays:[]}]));
+localStorage.setItem('links', JSON.stringify([{name:'Google',url:'https://www.google.com'},{name:'Wiki',url:'https://wikipedia.org'}]));
+localStorage.setItem('notes', JSON.stringify('my old note text'));
+localStorage.setItem('weatherCity', JSON.stringify('Tunis'));
+localStorage.setItem('theme', JSON.stringify('dark'));
+location.href = '__SITE__';
+</script>

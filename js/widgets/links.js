@@ -177,3 +177,43 @@ const Links = {
     draw();
   },
 };
+
+// ---------------------------------------------------------
+// Register the Favorite links module (see js/modules.js).
+// It has no page of its own: it lives on the dashboard.
+// ---------------------------------------------------------
+Modules.register({
+  id: "links",
+  order: 85,
+
+  collections: {
+    // { id, name, url, category }
+    links: {
+      default: [
+        { id: "default-google", name: "Google", url: "https://www.google.com", category: "tools" },
+        { id: "default-youtube", name: "YouTube", url: "https://www.youtube.com", category: "entertainment" },
+        { id: "default-gmail", name: "Gmail", url: "https://mail.google.com", category: "tools" },
+      ],
+      backup: true,
+      normalize: (l) => ({ category: "other", ...l }),
+    },
+  },
+
+  search(q, has) {
+    return {
+      label: "Links",
+      items: Links.all().filter((l) => has(l.name) || has(l.url)).slice(0, 6)
+        .map((l) => ({ text: l.name, icon: "external-link", url: Links.normalizeUrl(l.url), hint: "Opens in new tab" })),
+    };
+  },
+
+  quickAdd: [{
+    id: "link", label: "New favorite link", icon: "link", key: "L", order: 80,
+    async run() {
+      const created = await Links.openEditor(null, { quiet: true });
+      return { created, page: "dashboard", label: "Link", onDashboard: true };
+    },
+  }],
+
+  widgets: [{ id: "links", label: "Favorite links", span: 4, order: 80, render: (el) => Links.render(el) }],
+});

@@ -15,6 +15,9 @@ Pomodoro.tick();
 // 4. Draw the page named in the address (Dashboard by default)
 Router.start();
 
+// 4b. Today's automatic snapshot (in the background; see js/backups.js)
+Backups.snapshotDaily();
+
 // 5. Whenever any data is saved, recalculate statistics and reminders
 Store.onChange(() => {
   Stats.refresh();
@@ -42,6 +45,7 @@ setInterval(() => {
     lastDay = today;
     Router.refresh();
     Stats.refresh();
+    Backups.snapshotDaily(); // a new day = a new snapshot
   }
 }, 1000);
 Welcome.tick();
