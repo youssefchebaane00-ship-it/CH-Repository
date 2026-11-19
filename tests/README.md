@@ -31,6 +31,8 @@ The last line shows the total. Any failure is listed with its name, so you know 
 | `phase5.test.js` | Analytics, forecast, settings, import validation, shortcuts |
 | `stage-a.test.js` | Module registry, snapshots, backup reminders, command palette (runs on the real clock because it uses IndexedDB) |
 | `stage-b.test.js` | Projects & Kanban, dependencies, planner suggestions & conflicts, insights |
+| `stage-c.test.js` | Knowledge Hub (links, backlinks, rename, search, graph) and achievements (XP, levels, challenges) |
+| `stage-c-pwa.test.js` | Installable app: manifest, service worker, offline cache (runs from a local web server) |
 
 ## Good habit
 

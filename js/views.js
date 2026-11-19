@@ -124,6 +124,22 @@ const Views = {
         </section>
 
         <section class="card">
+          <div class="card-header"><h3 class="card-title"><span class="card-icon">${icon("smartphone")}</span>App</h3></div>
+          <div class="setting-row">
+            <div class="setting-text"><strong>Install as an app</strong><span data-pwa-status>${UI.escape(PWA.statusText())}</span></div>
+            <button class="btn btn-primary" type="button" data-install-app ${PWA.installPrompt ? "" : "hidden"}>${icon("download")}Install</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header"><h3 class="card-title"><span class="card-icon amber">${icon("trophy")}</span>Achievements</h3></div>
+          <div class="widget-toggles" data-gamification>
+            <label class="toggle-row"><input type="checkbox" data-setting="gamification" ${settings.gamification !== false ? "checked" : ""}><span>Show XP, levels, achievements and challenges</span></label>
+            <label class="toggle-row"><input type="checkbox" data-setting="celebrations" ${settings.celebrations !== false ? "checked" : ""}><span>Celebrate new levels and achievements (confetti + message)</span></label>
+          </div>
+        </section>
+
+        <section class="card">
           <div class="card-header"><h3 class="card-title"><span class="card-icon">${icon("calendar-clock")}</span>Planner</h3></div>
           <form class="setting-row" data-planner-form>
             <div class="setting-text"><strong>Planning hours</strong><span>“Suggest a plan” only places tasks between these times.</span></div>
@@ -258,6 +274,18 @@ const Views = {
         .forEach(([key, value]) => { pomoForm.elements[key].value = value; });
     });
     container.querySelector("[data-test-sound]").addEventListener("click", () => Sound.chime());
+
+    // Install as an app
+    container.querySelector("[data-install-app]").addEventListener("click", () => PWA.install());
+
+    // Achievements on/off
+    container.querySelector("[data-gamification]").addEventListener("change", (event) => {
+      const box = event.target.closest("[data-setting]");
+      if (!box) return;
+      Store.setSetting(box.dataset.setting, box.checked);
+      Shell.renderProfile();
+      UI.toast(box.checked ? "Turned on" : "Turned off", { type: "info", duration: 2000 });
+    });
 
     // Planner hours
     container.querySelector("[data-planner-form]").addEventListener("submit", (event) => {

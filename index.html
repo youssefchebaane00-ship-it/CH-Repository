@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PersonalDashboard</title>
 
+  <!-- Installable app: name, icons and colors (see manifest.webmanifest and sw.js) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="theme-color" content="#0a1020">
+
   <!-- Apply the saved theme BEFORE the page is drawn (avoids a white flash). Dark is the default. -->
   <script>
     try {
@@ -29,6 +35,7 @@
   <link rel="stylesheet" href="css/personal.css">
   <link rel="stylesheet" href="css/analytics.css">
   <link rel="stylesheet" href="css/stage-b.css">
+  <link rel="stylesheet" href="css/stage-c.css">
   <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
@@ -118,8 +125,10 @@
   <script src="js/charts.js"></script>
   <script src="js/widgets/analytics.js"></script>
   <script src="js/insights.js"></script>
+  <script src="js/widgets/achievements.js"></script>
   <script src="js/notifications.js"></script>
   <script src="js/backups.js"></script>
+  <script src="js/pwa.js"></script>
   <script src="js/views.js"></script>
   <script src="js/router.js"></script>
   <script src="js/shell.js"></script>

@@ -419,7 +419,7 @@ const Projects = {
       const milestone = event.target.closest("[data-milestone]");
       if (!milestone || event.target.type !== "checkbox") return;
       const done = event.target.checked;
-      this.update(project.id, { milestones: current().milestones.map((m) => (m.id === milestone.dataset.milestone ? { ...m, done } : m)) });
+      this.update(project.id, { milestones: current().milestones.map((m) => (m.id === milestone.dataset.milestone ? { ...m, done, doneAt: done ? new Date().toISOString() : null } : m)) });
       if (done) { UI.confetti(); UI.toast("Milestone reached! 🎉"); }
       drawMilestones(); drawSummary();
     });

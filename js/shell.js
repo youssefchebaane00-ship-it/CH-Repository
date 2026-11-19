@@ -49,7 +49,8 @@ const Shell = {
       <span class="avatar">${name ? UI.escape(name.charAt(0).toUpperCase()) : icon("user")}</span>
       <span class="profile-text">
         <span class="profile-name">${name ? UI.escape(name) : "Your profile"}</span>
-        <span class="profile-sub">${name ? "Settings" : "Add your name"}</span>
+        ${typeof Achievements !== "undefined" && Achievements.enabled() ? Achievements.profileHtml()
+          : `<span class="profile-sub">${name ? "Settings" : "Add your name"}</span>`}
       </span>`;
     document.getElementById("profile").title = "Settings";
   },

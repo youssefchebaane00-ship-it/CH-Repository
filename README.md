@@ -17,7 +17,8 @@ Tip: bookmark it or set it as your browser's home page.
 - **Planner:** time blocking on a day view with hours, a week overview, conflict detection, moving blocks around, estimated task durations, and **Suggest a plan**: rule-based (overdue → due date → priority) and only added when you accept it. Planning hours are set in Settings.
 - **Calendar:** month and week views, day agenda, events typed as Event, Deadline, Exam or Personal, with optional times. Tasks with due dates appear on their day. Double-click a day to add an event.
 - **Habits:** daily or weekly (“3× per week”) habits, current and longest streaks, completion rates, weekly and monthly check-in counts, 6-month heatmaps. History is never erased.
-- **Notes:** multiple notes with title, category, tags, pinning, search, timestamps and autosave. The dashboard quick note can be saved as a note.
+- **Knowledge Hub:** notes that link to each other with `[[Note title]]`, backlinks ("Linked from"), one-click creation of missing notes, links to projects and study subjects, favorites, recently opened, a **graph view** of how notes connect, and advanced search (`"exact phrase"`, `#tag`, `is:favorite`, `is:linked`, `is:orphan`, `category:`, `project:`, `subject:`). Renaming a note updates every link to it. The dashboard quick note can be saved as a note.
+- **Achievements (optional):** XP and levels calculated from your real history, 17 achievements with unlock dates, 3 daily and 2 weekly challenges (just for fun, no XP), and celebrations for new levels. Can be switched off in Settings.
 - **Study Tracker:** subjects with colors and weekly goals; a study stopwatch (start, pause, resume, stop & save, with the duration checked before saving); manual sessions; totals for today, this week, this month and per subject; a 7-day chart and session history
 - **Pomodoro:** 25/5/15 by default (changeable in Settings), start/pause/resume/reset/skip, long break after every 4 focus sessions, chime when a period ends, daily counter. Finished focus periods are logged to the chosen subject automatically.
 - Running timers keep going across pages, refreshes and closed tabs, and show in the top bar and the browser tab title
@@ -34,6 +35,20 @@ Tip: bookmark it or set it as your browser's home page.
 - **Settings:** theme and accent color, which dashboard widgets to show, your name, weather city, Pomodoro durations and sound, currency and budget, backup export/import, delete all data
 - Works on desktop, tablet and phone. Respects the system "reduce motion" setting.
 - **Keyboard:** `Ctrl+K` or `/` to search, `Q` for quick add, `?` for all shortcuts
+
+## Install as an app (offline)
+
+Installing and offline mode need the app to be opened from a **web address**, not a double-clicked file.
+
+**On this computer (nothing goes online):**
+
+1. In a terminal in this folder, run `powershell -ExecutionPolicy Bypass -File serve.ps1`
+2. Open **http://localhost:8080** in Chrome or Edge.
+3. Settings → App → **Install** (or the install icon in the address bar).
+
+**Important:** `http://localhost:8080` and the double-clicked file keep **separate data**. Move your data once: Settings → Export JSON in the old one, then Import JSON in the new one.
+
+The installed app still needs the little server running. To use it on a phone, or without running `serve.ps1`, the app has to be hosted online (for example on GitHub Pages).
 
 ## Your data
 
@@ -57,6 +72,7 @@ css/
   personal.css        goals, expenses and favorite links styles
   analytics.css       charts, weekly widget, forecast, settings extras
   stage-b.css         projects & Kanban, planner, insights
+  stage-c.css         knowledge hub, graph, achievements
   animations.css      all animations + reduced-motion support
 js/
   icons.js            Lucide icons (copied in, so they work offline)
@@ -65,6 +81,7 @@ js/
   modules.js          the module registry: each feature registers its page, data,
                       search results, reminders, quick actions and widgets here
   backups.js          automatic daily snapshots (IndexedDB) and backup reminders
+  pwa.js              installable app: registers sw.js, "Install" button
   widgets/            one file per feature (tasks, calendar, habits, notes, links, weather, …)
   charts.js           bar charts made of plain HTML (no chart library)
   insights.js         rule-based observations from your data
@@ -73,6 +90,10 @@ js/
   router.js           switches pages using the address (#/tasks, #/habits, …)
   shell.js            sidebar, theme toggle, search, quick add, keyboard shortcuts
   app.js              starts everything (loaded last)
+sw.js                 service worker: keeps a copy of the app for offline use
+manifest.webmanifest  app name, icons and colors for installing
+icons/                app icons
+serve.ps1             tiny local web server (for installing / offline mode)
 tests/                automated tests (see tests/README.md)
 ```
 

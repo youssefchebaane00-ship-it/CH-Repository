@@ -18,11 +18,16 @@ Router.start();
 // 4b. Today's automatic snapshot (in the background; see js/backups.js)
 Backups.snapshotDaily();
 
+// 4c. Offline mode + "Install app" (only when opened from a web address; see js/pwa.js)
+PWA.init();
+
 // 5. Whenever any data is saved, recalculate statistics and reminders
 Store.onChange(() => {
   Stats.refresh();
   Notifications.refresh();
+  Achievements.checkProgress(); // new level or achievement? (waits a moment, then checks once)
 });
+Achievements.checkProgress();
 
 // 6. One clock for the whole app: ticks every second.
 //    It updates the clocks and timers, and finishes a Pomodoro when time is up.
