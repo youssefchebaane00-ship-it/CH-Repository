@@ -24,10 +24,29 @@ async function appFiles() {
   return ["./", "./index.html", ...new Set(local)];
 }
 
+// Save one file, trying up to 3 times (servers sometimes answer "busy" for a moment)
+async function saveFile(cache, path) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch(path, { cache: "no-store" });
+      if (response.ok) { await cache.put(path, response); return true; }
+    } catch {
+      // offline or network hiccup: wait and retry
+    }
+    await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+  }
+  return false;
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    await cache.addAll(await appFiles());
+    // Each file separately, so one failure can't block all the others.
+    // (A file that still failed is saved the first time the app uses it.)
+    const files = await appFiles();
+    const results = await Promise.all(files.map((path) => saveFile(cache, path)));
+    const failed = files.filter((_, i) => !results[i]);
+    if (failed.length) console.warn("Not cached yet (will be cached when used):", failed);
     await self.skipWaiting(); // use the new version straight away
   })());
 });
